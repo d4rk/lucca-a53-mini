@@ -1,5 +1,6 @@
 import curses
 import queue
+from characteristic_parsers import get_parser
 
 def format_ble_table(data, max_lines=None, max_cols=None):
     lines = []
@@ -13,7 +14,8 @@ def format_ble_table(data, max_lines=None, max_cols=None):
 
         char_list_data = []
         for char in service.get('characteristics', []):
-            char_name = f"{char.get('uuid', '')} ({char.get('description', '')})"
+            char_uuid = char.get('uuid', '')
+            char_name = f"{char_uuid} ({char.get('description', '')})"
             props = ','.join(char.get('properties', []))
             if char.get('error'):
                 value_str = f"Error: {char['error']}"
@@ -24,15 +26,13 @@ def format_ble_table(data, max_lines=None, max_cols=None):
             
             parsed = ''
             raw_value = char.get('value')
-            if raw_value and char.get('uuid', '').lower() == 'acab0005-67f5-479e-8711-b3b99198ce6c':
-                if len(raw_value) >= 7:
-                    year = raw_value[0] + 2000
-                    month = raw_value[1]
-                    day = raw_value[2]
-                    hour = raw_value[4]
-                    minute = raw_value[5]
-                    second = raw_value[6]
-                    parsed = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            if raw_value:
+                parser = get_parser(char_uuid)
+                if parser:
+                    parsed_value = parser.parse_value(raw_value)
+                    if parsed_value is not None:
+                        parsed = parsed_value
+
             char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed})
 
         if max_cols is None:
@@ -86,4 +86,4 @@ def curses_polling(result_queue):
                     break
             except Exception:
                 pass
-    curses.wrapper(poll_loop)
+    curses.wrapper( poll_loop)
