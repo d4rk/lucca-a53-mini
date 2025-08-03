@@ -35,7 +35,7 @@ class TimerStateParser(CharacteristicParser):
         return [("Timer State", state)]
 
 class ScheduleParser(CharacteristicParser):
-    """Parses the weekly schedule characteristic."""
+    """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
     DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
     def parse_value(self, value):
@@ -48,20 +48,23 @@ class ScheduleParser(CharacteristicParser):
             day_schedule = []
             for slot_index in range(3):
                 offset = (day_index * 3 + slot_index) * 4
-                start_hour = value[offset]
-                start_minute = value[offset + 1]
-                duration = value[offset + 2]
-                flags = value[offset + 3]
+                slot_data = value[offset:offset+4]
 
-                # Slot is enabled if start time or duration is non-zero
-                if start_hour != 0 or start_minute != 0 or duration != 0:
-                    end_hour = start_hour + (start_minute + duration) // 60
-                    end_minute = (start_minute + duration) % 60
-                    time_range = f"{start_hour:02d}:{start_minute:02d} - {end_hour:02d}:{end_minute:02d}"
-                    
-                    boiler_on = (flags & 0x01) != 0
-                    boiler_status = " (Boiler ON)" if boiler_on else ""
-                    day_schedule.append(f"{time_range}{boiler_status}")
+                # Slot is disabled if all bytes are zero
+                if not any(slot_data):
+                    continue
+
+                end_minute = slot_data[0]
+                end_hour = slot_data[1]
+                start_minute = slot_data[2]
+                start_hour_byte = slot_data[3]
+
+                start_hour = start_hour_byte & 0x7F  # Lower 7 bits are the hour
+                boiler_on = (start_hour_byte & 0x80) != 0 # MSB is boiler flag
+
+                time_range = f"{start_hour:02d}:{start_minute:02d} - {end_hour:02d}:{end_minute:02d}"
+                boiler_status = " (Boiler ON)" if boiler_on else ""
+                day_schedule.append(f"{time_range}{boiler_status}")
             
             if day_schedule:
                 parsed_schedule.append((day_name, ", ".join(day_schedule)))
