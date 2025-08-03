@@ -1,0 +1,36 @@
+Scanning for BLE devices with 'S1' in the name...
+Found devices:
+  [0] S1 v.02.07        (1531BB44-BF0D-1D9B-B55C-49DB6ED97BC0)
+Automatically connecting to S1 v.02.07        (1531BB44-BF0D-1D9B-B55C-49DB6ED97BC0)
+Connected: True
+Service: acab0001-67f5-479e-8711-b3b99198ce6c (Unknown)
+  Characteristic: acab0002-67f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['write', 'read']
+    Value (hex, 2 bytes per group, 8 per line):
+      01
+  Characteristic: acab0003-67f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['write', 'read']
+    Value (hex, 2 bytes per group, 8 per line):
+      0009 1e86 000d 1e8c 0000 0000 0009 1e86
+      0000 0000 0000 0000 0009 1e86 0000 0000
+      0000 0000 0009 1e86 0000 0000 0000 0000
+      0009 1e86 0000 0000 0000 0000 0009 0088
+      0000 0000 0000 0000 0009 0088 0000 0000
+      0000 0000
+  Characteristic: acab0004-67f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['write', 'read']
+    Value (hex, 2 bytes per group, 8 per line):
+      0000 0000 0000 00
+  Characteristic: acab0005-67f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['read']
+    Value (hex, 2 bytes per group, 8 per line):
+      1908 0205 1728 00
+Service: acab0001-77f5-479e-8711-b3b99198ce6c (Unknown)
+  Characteristic: acab0002-77f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['read']
+    Value (hex, 2 bytes per group, 8 per line):
+      3300 0000
+  Characteristic: acab0003-77f5-479e-8711-b3b99198ce6c (Unknown)
+    Properties: ['read']
+    Value (hex, 2 bytes per group, 8 per line):
+      5500 0000

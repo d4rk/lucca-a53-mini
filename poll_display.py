@@ -1,18 +1,17 @@
 import curses
 import queue
 
-def format_ble_table(data, max_lines, max_cols):
-    # Try to format the BLE data as a table
+def format_ble_table(data, max_lines=None, max_cols=None):
     lines = []
     if not isinstance(data, list):
-        # fallback to string
-        return str(data).splitlines()[:max_lines]
+        s_lines = str(data).splitlines()
+        return s_lines if max_lines is None else s_lines[:max_lines]
+
     for service in data:
         header = f"Service: {service.get('uuid', '')} ({service.get('description', '')})"
-        lines.append(header[:max_cols])
-        char_header = f"{'Characteristic':<40} {'Properties':<20} {'Value (hex)':<40} {'Parsed':<20}"
-        lines.append(char_header[:max_cols])
-        lines.append('-' * min(len(char_header), max_cols))
+        lines.append(header if max_cols is None else header[:max_cols])
+
+        char_list_data = []
         for char in service.get('characteristics', []):
             char_name = f"{char.get('uuid', '')} ({char.get('description', '')})"
             props = ','.join(char.get('properties', []))
@@ -34,18 +33,33 @@ def format_ble_table(data, max_lines, max_cols):
                     minute = raw_value[5]
                     second = raw_value[6]
                     parsed = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed})
 
-            # Truncate each field to fit
-            char_name = char_name[:40]
-            props = props[:20]
-            value_str = value_str[:40]
-            parsed = parsed[:20]
-            row = f"{char_name:<40} {props:<20} {value_str:<40} {parsed:<20}"
-            lines.append(row[:max_cols])
-        lines.append('')
-        if len(lines) >= max_lines:
-            break
-    return lines[:max_lines]
+        if max_cols is None:
+            for char_data in char_list_data:
+                lines.append(f"  Characteristic: {char_data['name']}")
+                lines.append(f"    Properties: {char_data['props']}")
+                lines.append(f"    Value (hex): {char_data['value']}")
+                if char_data['parsed']:
+                    lines.append(f"    Parsed: {char_data['parsed']}")
+            lines.append('')
+        else:
+            char_header = f"{'Characteristic':<40} {'Properties':<20} {'Value (hex)':<40} {'Parsed':<20}"
+            lines.append(char_header[:max_cols])
+            lines.append('-' * min(len(char_header), max_cols))
+            for char_data in char_list_data:
+                char_name = char_data['name'][:40]
+                props = char_data['props'][:20]
+                value_str = char_data['value'][:40]
+                parsed = char_data['parsed'][:20]
+                row = f"{char_name:<40} {props:<20} {value_str:<40} {parsed:<20}"
+                lines.append(row[:max_cols])
+            lines.append('')
+
+        if max_lines is not None and len(lines) >= max_lines:
+            return lines[:max_lines]
+            
+    return lines
 
 def curses_polling(result_queue):
     def poll_loop(stdscr):

@@ -38,7 +38,7 @@ def main():
         if isinstance(result, dict) and 'error' in result:
             print(f"An error occurred: {result['error']}")
         else:
-            lines = format_ble_table(result, max_lines=100, max_cols=120)
+            lines = format_ble_table(result)
             for line in lines:
                 print(line)
     ble_worker.stop()
