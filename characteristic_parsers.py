@@ -10,6 +10,9 @@ class CharacteristicParser:
 
 class DateTimeParser(CharacteristicParser):
     """Parses the datetime characteristic."""
+    def __init__(self, description):
+        self.description = description
+
     def parse_value(self, value):
         if len(value) >= 7:
             year = value[0] + 2000
@@ -20,7 +23,7 @@ class DateTimeParser(CharacteristicParser):
             minute = value[5]
             second = value[6]
             dt_str = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
-            return [("Date/Time", dt_str)]
+            return [(self.description, dt_str)]
         return None
 
 class TimerStateParser(CharacteristicParser):
@@ -33,8 +36,8 @@ class TimerStateParser(CharacteristicParser):
 
 # Parser registry
 PARSERS = {
-    "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser(),
-    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser(),
+    "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("?? Timestamp"),
+    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
     "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
 }
 
