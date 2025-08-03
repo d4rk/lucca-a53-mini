@@ -70,8 +70,11 @@ class ScheduleParser(CharacteristicParser):
 
         return parsed_schedule
 
-class PowerAndTempParser(CharacteristicParser):
-    """Parses the brew boiler temperature and state characteristic."""
+class BoilerParser(CharacteristicParser):
+    """Parses a boiler's temperature and state characteristic."""
+    def __init__(self, name):
+        self.name = name
+
     def parse_value(self, value):
         if len(value) < 4:
             return None
@@ -88,20 +91,9 @@ class PowerAndTempParser(CharacteristicParser):
         temperature = temp_raw / 10.0
 
         return [
-            ("Brew Boiler State", heater_state),
-            ("Brew Boiler Temp", f"{temperature} °C"),
+            (f"{self.name} Boiler State", heater_state),
+            (f"{self.name} Boiler Temp", f"{temperature} °C"),
         ]
-
-class SteamBoilerParser(CharacteristicParser):
-    """Parses the steam boiler temperature characteristic."""
-    def parse_value(self, value):
-        if len(value) < 4:
-            return None
-
-        temp_raw = int.from_bytes(value[0:2], 'little')
-        temperature = temp_raw / 10.0
-
-        return [("Steam Boiler Temp", f"{temperature} °C")]
 
 # Parser registry
 PARSERS = {
@@ -109,8 +101,8 @@ PARSERS = {
     "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
     "acab0002-67f5-479e-8711-b3b99198ce6c": MachineStateParser(),
-    "acab0002-77f5-479e-8711-b3b99198ce6c": PowerAndTempParser(),
-    "acab0003-77f5-479e-8711-b3b99198ce6c": SteamBoilerParser(),
+    "acab0002-77f5-479e-8711-b3b99198ce6c": BoilerParser("Brew"),
+    "acab0003-77f5-479e-8711-b3b99198ce6c": BoilerParser("Steam"),
 }
 
 def get_parser(uuid):
