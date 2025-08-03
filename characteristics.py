@@ -1,51 +1,55 @@
 from bleak import BleakClient
 import asyncio
 
-async def read_all_characteristics(client, services):
-    for service in services:
-        print(f"Service: {service.uuid} ({service.description})")
+async def read_all_characteristics(client):
+    services_data = []
+    for service in client.services:
+        service_data = {
+            "uuid": service.uuid,
+            "description": service.description,
+            "characteristics": [],
+        }
         for char in service.characteristics:
-            print(f"  Characteristic: {char.uuid} ({char.description})")
-            print(f"    Properties: {char.properties}")
-            if 'read' in char.properties:
+            char_data = {
+                "uuid": char.uuid,
+                "description": char.description,
+                "properties": char.properties,
+            }
+            if "read" in char.properties:
                 try:
                     value = await client.read_gatt_char(char.uuid)
                     hex_str = value.hex()
-                    chunks = [hex_str[i:i+4] for i in range(0, len(hex_str), 4)]
-                    print("    Value (hex, 2 bytes per group, 8 per line):")
-                    for i in range(0, len(chunks), 8):
-                        line = ' '.join(chunks[i:i+8])
-                        print(f"      {line}")
-                    if char.uuid.lower() == 'acab0005-67f5-479e-8711-b3b99198ce6c':
-                        if len(value) >= 6:
-                            year = value[0] + 2000
-                            month = value[1]
-                            day = value[2]
-                            unknown = value[3]
-                            hour = value[4]
-                            minute = value[5]
-                            second = value[6]
-                            print(f"    Parsed Date/Time: {year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}")
+                    char_data["value"] = value
+                    char_data["value_chunks"] = [
+                        hex_str[i : i + 4] for i in range(0, len(hex_str), 4)
+                    ]
                 except Exception as e:
-                    print(f"    Could not read value: {e}")
-            else:
-                print(f"    Value: <not readable>")
+                    char_data["error"] = str(e)
+            service_data["characteristics"].append(char_data)
+        services_data.append(service_data)
+    return services_data
 
-async def list_characteristics(address, poll_interval=0):
-    async with BleakClient(address) as client:
-        print(f"Connected: {client.is_connected}")
-        await client.connect()
-        services = client.services
-        if services is None:
-            print("No services found or failed to fetch services.")
-            return
-        if poll_interval and poll_interval > 0:
-            print(f"Polling all readable characteristics every {poll_interval} seconds. Press Ctrl+C to stop.")
-            try:
+
+async def list_characteristics(address, result_queue=None, poll_interval=0):
+    try:
+        async with BleakClient(address) as client:
+            if not client.is_connected:
+                await client.connect()
+
+            if poll_interval and poll_interval > 0:
+                if not result_queue:
+                    raise ValueError("A result_queue must be provided for polling.")
                 while True:
-                    await read_all_characteristics(client, services)
+                    data = await read_all_characteristics(client)
+                    result_queue.put(data)
                     await asyncio.sleep(poll_interval)
-            except KeyboardInterrupt:
-                print("Polling stopped by user.")
+            else:
+                data = await read_all_characteristics(client)
+                if result_queue:
+                    result_queue.put(data)
+                return data
+    except Exception as e:
+        if result_queue:
+            result_queue.put({"error": str(e)})
         else:
-            await read_all_characteristics(client, services)
+            raise e
