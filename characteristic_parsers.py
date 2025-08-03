@@ -23,9 +23,19 @@ class DateTimeParser(CharacteristicParser):
             return [("Date/Time", dt_str)]
         return None
 
+class TimerStateParser(CharacteristicParser):
+    """Parses the timer state characteristic."""
+    def parse_value(self, value):
+        if not value:
+            return None
+        state = "Enabled" if value[0] == 0x01 else "Disabled"
+        return [("Timer State", state)]
+
 # Parser registry
 PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser(),
+    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser(),
+    "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
 }
 
 def get_parser(uuid):
