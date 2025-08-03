@@ -48,8 +48,9 @@ def format_ble_table(data, max_lines=None, max_cols=None):
                 else:
                     lines.append(f"      {char_data['value']}")
                 if char_data['parsed']:
+                    lines.append(f"    Parsed Values:")
                     for desc, val in char_data['parsed']:
-                        lines.append(f"    {desc}: {val}")
+                        lines.append(f"      {desc}: {val}")
             lines.append('')
         else:
             char_header = f"{'Characteristic':<40} {'Properties':<20} {'Value (hex)':<40} {'Parsed':<20}"
