@@ -26,13 +26,13 @@ class DateTimeParser(CharacteristicParser):
             return [(self.description, dt_str)]
         return None
 
-class TimerStateParser(CharacteristicParser):
-    """Parses the timer state characteristic."""
+class MachineStateParser(CharacteristicParser):
+    """Parses the main machine power state characteristic."""
     def parse_value(self, value):
         if not value:
             return None
-        state = "Enabled" if value[0] == 0x01 else "Disabled"
-        return [("Timer State", state)]
+        state = "On" if value[0] == 0x01 else "Off"
+        return [("Machine Power", state)]
 
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
@@ -50,7 +50,6 @@ class ScheduleParser(CharacteristicParser):
                 offset = (day_index * 3 + slot_index) * 4
                 slot_data = value[offset:offset+4]
 
-                # Slot is disabled if all bytes are zero
                 if not any(slot_data):
                     continue
 
@@ -59,8 +58,8 @@ class ScheduleParser(CharacteristicParser):
                 start_minute = slot_data[2]
                 start_hour_byte = slot_data[3]
 
-                start_hour = start_hour_byte & 0x7F  # Lower 7 bits are the hour
-                boiler_on = (start_hour_byte & 0x80) != 0 # MSB is boiler flag
+                start_hour = start_hour_byte & 0x7F
+                boiler_on = (start_hour_byte & 0x80) != 0
 
                 time_range = f"{start_hour:02d}:{start_minute:02d} - {end_hour:02d}:{end_minute:02d}"
                 boiler_status = " (Boiler ON)" if boiler_on else ""
@@ -72,27 +71,46 @@ class ScheduleParser(CharacteristicParser):
         return parsed_schedule
 
 class PowerAndTempParser(CharacteristicParser):
-    """Parses the power and temperature characteristic."""
+    """Parses the brew boiler temperature and state characteristic."""
     def parse_value(self, value):
         if len(value) < 4:
             return None
 
-        power_state = "On" if value[1] == 0x03 else "Off"
+        heater_state_byte = value[1]
+        if heater_state_byte == 0x03:
+            heater_state = "At Temperature"
+        elif heater_state_byte == 0x02:
+            heater_state = "Heating"
+        else:
+            heater_state = "Idle"
+
         temp_raw = int.from_bytes(value[0:2], 'little')
         temperature = temp_raw / 10.0
 
         return [
-            ("Power State", power_state),
-            ("Temperature", f"{temperature} °C"),
+            ("Brew Boiler State", heater_state),
+            ("Brew Boiler Temp", f"{temperature} °C"),
         ]
+
+class SteamBoilerParser(CharacteristicParser):
+    """Parses the steam boiler temperature characteristic."""
+    def parse_value(self, value):
+        if len(value) < 4:
+            return None
+
+        temp_raw = int.from_bytes(value[0:2], 'little')
+        temperature = temp_raw / 10.0
+
+        return [("Steam Boiler Temp", f"{temperature} °C")]
 
 # Parser registry
 PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
     "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
-    "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
+    "acab0002-67f5-479e-8711-b3b99198ce6c": MachineStateParser(),
     "acab0002-77f5-479e-8711-b3b99198ce6c": PowerAndTempParser(),
+    "acab0003-77f5-479e-8711-b3b99198ce6c": SteamBoilerParser(),
 }
 
 def get_parser(uuid):
