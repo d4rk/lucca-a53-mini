@@ -17,10 +17,11 @@ def format_ble_table(data, max_lines=None, max_cols=None):
             char_uuid = char.get('uuid', '')
             char_name = f"{char_uuid} ({char.get('description', '')})"
             props = ','.join(char.get('properties', []))
+            value_chunks = char.get('value_chunks', [])
             if char.get('error'):
                 value_str = f"Error: {char['error']}"
-            elif char.get('value_chunks'):
-                value_str = ' '.join(char['value_chunks'])
+            elif value_chunks:
+                value_str = ' '.join(value_chunks)
             else:
                 value_str = '<not readable>'
             
@@ -33,13 +34,19 @@ def format_ble_table(data, max_lines=None, max_cols=None):
                     if parsed_value:
                         parsed_list = parsed_value
 
-            char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed_list})
+            char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed_list, 'value_chunks': value_chunks})
 
         if max_cols is None:
             for char_data in char_list_data:
                 lines.append(f"  Characteristic: {char_data['name']}")
                 lines.append(f"    Properties: {char_data['props']}")
-                lines.append(f"    Value (hex): {char_data['value']}")
+                lines.append(f"    Value (hex):")
+                if char_data['value_chunks']:
+                    for i in range(0, len(char_data['value_chunks']), 8):
+                        line = ' '.join(char_data['value_chunks'][i:i+8])
+                        lines.append(f"      {line}")
+                else:
+                    lines.append(f"      {char_data['value']}")
                 if char_data['parsed']:
                     for desc, val in char_data['parsed']:
                         lines.append(f"    {desc}: {val}")
