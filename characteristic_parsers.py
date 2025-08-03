@@ -1,7 +1,11 @@
 class CharacteristicParser:
     """Base class for characteristic parsers."""
     def parse_value(self, value):
-        """Parses the raw value of a characteristic."""
+        """Parses the raw value of a characteristic.
+
+        Returns:
+            A list of (description, value) tuples, or None.
+        """
         raise NotImplementedError
 
 class DateTimeParser(CharacteristicParser):
@@ -15,7 +19,8 @@ class DateTimeParser(CharacteristicParser):
             hour = value[4]
             minute = value[5]
             second = value[6]
-            return f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            dt_str = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            return [("Date/Time", dt_str)]
         return None
 
 # Parser registry

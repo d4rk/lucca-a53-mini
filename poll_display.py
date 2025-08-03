@@ -24,16 +24,16 @@ def format_ble_table(data, max_lines=None, max_cols=None):
             else:
                 value_str = '<not readable>'
             
-            parsed = ''
+            parsed_list = []
             raw_value = char.get('value')
             if raw_value:
                 parser = get_parser(char_uuid)
                 if parser:
                     parsed_value = parser.parse_value(raw_value)
-                    if parsed_value is not None:
-                        parsed = parsed_value
+                    if parsed_value:
+                        parsed_list = parsed_value
 
-            char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed})
+            char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed_list})
 
         if max_cols is None:
             for char_data in char_list_data:
@@ -41,7 +41,8 @@ def format_ble_table(data, max_lines=None, max_cols=None):
                 lines.append(f"    Properties: {char_data['props']}")
                 lines.append(f"    Value (hex): {char_data['value']}")
                 if char_data['parsed']:
-                    lines.append(f"    Parsed: {char_data['parsed']}")
+                    for desc, val in char_data['parsed']:
+                        lines.append(f"    {desc}: {val}")
             lines.append('')
         else:
             char_header = f"{'Characteristic':<40} {'Properties':<20} {'Value (hex)':<40} {'Parsed':<20}"
@@ -51,7 +52,8 @@ def format_ble_table(data, max_lines=None, max_cols=None):
                 char_name = char_data['name'][:40]
                 props = char_data['props'][:20]
                 value_str = char_data['value'][:40]
-                parsed = char_data['parsed'][:20]
+                parsed_str = ", ".join([val for desc, val in char_data['parsed']])
+                parsed = parsed_str[:20]
                 row = f"{char_name:<40} {props:<20} {value_str:<40} {parsed:<20}"
                 lines.append(row[:max_cols])
             lines.append('')
