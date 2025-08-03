@@ -74,7 +74,7 @@ class ScheduleParser(CharacteristicParser):
 # Parser registry
 PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
-    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
+    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("(?) Last Sync Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
     "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
 }
