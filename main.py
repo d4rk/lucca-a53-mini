@@ -8,8 +8,7 @@ from poll_display import curses_polling, format_ble_table
 def main():
 
     parser = argparse.ArgumentParser(description="List or poll BLE characteristics for S1 v.02.07 devices.")
-    parser.add_argument('--poll', type=float, default=0, help='Polling interval in seconds (0 = one-time read)')
-    parser.add_argument('--inplace', action='store_true', help='Display polling output in-place using curses')
+    parser.add_argument('--poll', type=float, default=0, help='Polling interval in seconds (0 = one-time read). Enables in-place display.')
     args = parser.parse_args()
 
     async def get_devices():
@@ -32,7 +31,7 @@ def main():
     ble_worker = BLEWorker()
     ble_worker.start()
     result_queue = ble_worker.list_characteristics(address, poll_interval=args.poll)
-    if args.poll and args.inplace:
+    if args.poll > 0:
         curses_polling(result_queue)
     else:
         result = result_queue.get()  # Blocking wait for result
