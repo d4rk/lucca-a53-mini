@@ -71,12 +71,28 @@ class ScheduleParser(CharacteristicParser):
 
         return parsed_schedule
 
+class PowerAndTempParser(CharacteristicParser):
+    """Parses the power and temperature characteristic."""
+    def parse_value(self, value):
+        if len(value) < 4:
+            return None
+
+        power_state = "On" if value[1] == 0x03 else "Off"
+        temp_raw = int.from_bytes(value[0:2], 'little')
+        temperature = temp_raw / 10.0
+
+        return [
+            ("Power State", power_state),
+            ("Temperature", f"{temperature} °C"),
+        ]
+
 # Parser registry
 PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
-    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("(?) Last Sync Time"),
+    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
     "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
+    "acab0002-77f5-479e-8711-b3b99198ce6c": PowerAndTempParser(),
 }
 
 def get_parser(uuid):
