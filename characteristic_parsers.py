@@ -26,13 +26,13 @@ class DateTimeParser(CharacteristicParser):
             return [(self.description, dt_str)]
         return None
 
-class MachineStateParser(CharacteristicParser):
-    """Parses the main machine power state characteristic."""
+class TimerStateParser(CharacteristicParser):
+    """Parses the timer state characteristic."""
     def parse_value(self, value):
         if not value:
             return None
-        state = "On" if value[0] == 0x01 else "Off"
-        return [("Machine Power", state)]
+        state = "Enabled" if value[0] == 0x01 else "Disabled"
+        return [("Timer State", state)]
 
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
@@ -100,7 +100,7 @@ PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
     "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
-    "acab0002-67f5-479e-8711-b3b99198ce6c": MachineStateParser(),
+    "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
     "acab0002-77f5-479e-8711-b3b99198ce6c": BoilerParser("Brew"),
     "acab0003-77f5-479e-8711-b3b99198ce6c": BoilerParser("Steam"),
 }
