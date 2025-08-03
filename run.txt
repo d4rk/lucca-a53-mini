@@ -1,0 +1,54 @@
+Scanning for 'S1 v.02.07'
+[0;31m---------------------------------------------------------------------------[0m
+[0;31mKeyboardInterrupt[0m                         Traceback (most recent call last)
+File [0;32m~/Code/s1-btle-sniffer/main.py:47[0m
+[1;32m     44[0m     ble_worker[38;5;241m.[39mstop()
+[1;32m     46[0m [38;5;28;01mif[39;00m [38;5;18m__name__[39m [38;5;241m==[39m [38;5;124m"[39m[38;5;124m__main__[39m[38;5;124m"[39m:
+[0;32m---> 47[0m     [43mmain[49m[43m([49m[43m)[49m
+
+File [0;32m~/Code/s1-btle-sniffer/main.py:17[0m, in [0;36mmain[0;34m()[0m
+[1;32m     14[0m [38;5;28;01masync[39;00m [38;5;28;01mdef[39;00m [38;5;21mget_devices[39m():
+[1;32m     15[0m     [38;5;28;01mreturn[39;00m [38;5;28;01mawait[39;00m discover_s1_devices()
+[0;32m---> 17[0m s1_devices [38;5;241m=[39m [43masyncio[49m[38;5;241;43m.[39;49m[43mrun[49m[43m([49m[43mget_devices[49m[43m([49m[43m)[49m[43m)[49m
+[1;32m     18[0m [38;5;28;01mif[39;00m [38;5;129;01mnot[39;00m s1_devices:
+[1;32m     19[0m     [38;5;28;01mreturn[39;00m
+
+File [0;32m/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/runners.py:44[0m, in [0;36mrun[0;34m(main, debug)[0m
+[1;32m     42[0m     [38;5;28;01mif[39;00m debug [38;5;129;01mis[39;00m [38;5;129;01mnot[39;00m [38;5;28;01mNone[39;00m:
+[1;32m     43[0m         loop[38;5;241m.[39mset_debug(debug)
+[0;32m---> 44[0m     [38;5;28;01mreturn[39;00m [43mloop[49m[38;5;241;43m.[39;49m[43mrun_until_complete[49m[43m([49m[43mmain[49m[43m)[49m
+[1;32m     45[0m [38;5;28;01mfinally[39;00m:
+[1;32m     46[0m     [38;5;28;01mtry[39;00m:
+
+File [0;32m/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py:629[0m, in [0;36mBaseEventLoop.run_until_complete[0;34m(self, future)[0m
+[1;32m    627[0m future[38;5;241m.[39madd_done_callback(_run_until_complete_cb)
+[1;32m    628[0m [38;5;28;01mtry[39;00m:
+[0;32m--> 629[0m     [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mrun_forever[49m[43m([49m[43m)[49m
+[1;32m    630[0m [38;5;28;01mexcept[39;00m:
+[1;32m    631[0m     [38;5;28;01mif[39;00m new_task [38;5;129;01mand[39;00m future[38;5;241m.[39mdone() [38;5;129;01mand[39;00m [38;5;129;01mnot[39;00m future[38;5;241m.[39mcancelled():
+[1;32m    632[0m         [38;5;66;03m# The coroutine raised a BaseException. Consume the exception[39;00m
+[1;32m    633[0m         [38;5;66;03m# to not log a warning, the caller doesn't have access to the[39;00m
+[1;32m    634[0m         [38;5;66;03m# local task.[39;00m
+
+File [0;32m/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py:596[0m, in [0;36mBaseEventLoop.run_forever[0;34m(self)[0m
+[1;32m    594[0m events[38;5;241m.[39m_set_running_loop([38;5;28mself[39m)
+[1;32m    595[0m [38;5;28;01mwhile[39;00m [38;5;28;01mTrue[39;00m:
+[0;32m--> 596[0m     [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_run_once[49m[43m([49m[43m)[49m
+[1;32m    597[0m     [38;5;28;01mif[39;00m [38;5;28mself[39m[38;5;241m.[39m_stopping:
+[1;32m    598[0m         [38;5;28;01mbreak[39;00m
+
+File [0;32m/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/asyncio/base_events.py:1854[0m, in [0;36mBaseEventLoop._run_once[0;34m(self)[0m
+[1;32m   1851[0m     when [38;5;241m=[39m [38;5;28mself[39m[38;5;241m.[39m_scheduled[[38;5;241m0[39m][38;5;241m.[39m_when
+[1;32m   1852[0m     timeout [38;5;241m=[39m [38;5;28mmin[39m([38;5;28mmax[39m([38;5;241m0[39m, when [38;5;241m-[39m [38;5;28mself[39m[38;5;241m.[39mtime()), MAXIMUM_SELECT_TIMEOUT)
+[0;32m-> 1854[0m event_list [38;5;241m=[39m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_selector[49m[38;5;241;43m.[39;49m[43mselect[49m[43m([49m[43mtimeout[49m[43m)[49m
+[1;32m   1855[0m [38;5;28mself[39m[38;5;241m.[39m_process_events(event_list)
+[1;32m   1857[0m [38;5;66;03m# Handle 'later' callbacks that are ready.[39;00m
+
+File [0;32m/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/selectors.py:562[0m, in [0;36mKqueueSelector.select[0;34m(self, timeout)[0m
+[1;32m    560[0m ready [38;5;241m=[39m []
+[1;32m    561[0m [38;5;28;01mtry[39;00m:
+[0;32m--> 562[0m     kev_list [38;5;241m=[39m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_selector[49m[38;5;241;43m.[39;49m[43mcontrol[49m[43m([49m[38;5;28;43;01mNone[39;49;00m[43m,[49m[43m [49m[43mmax_ev[49m[43m,[49m[43m [49m[43mtimeout[49m[43m)[49m
+[1;32m    563[0m [38;5;28;01mexcept[39;00m [38;5;167;01mInterruptedError[39;00m:
+[1;32m    564[0m     [38;5;28;01mreturn[39;00m ready
+
+[0;31mKeyboardInterrupt[0m: 
