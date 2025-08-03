@@ -30,9 +30,12 @@ def format_ble_table(data, max_lines=None, max_cols=None):
             if raw_value:
                 parser = get_parser(char_uuid)
                 if parser:
-                    parsed_value = parser.parse_value(raw_value)
-                    if parsed_value:
-                        parsed_list = parsed_value
+                    try:
+                        parsed_value = parser.parse_value(raw_value)
+                        if parsed_value:
+                            parsed_list = parsed_value
+                    except Exception:
+                        parsed_list.append(("** Parsing failed **", ""))
 
             char_list_data.append({'name': char_name, 'props': props, 'value': value_str, 'parsed': parsed_list, 'value_chunks': value_chunks})
 
