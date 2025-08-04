@@ -4,7 +4,7 @@ from ble_worker import BLEWorker
 from characteristic_parsers import get_parser
 from schedule_coder import ScheduleCoder
 
-class CoffeeMachineAPI:
+class CoffeeMachine:
     """
     A high-level API for controlling the coffee machine via Bluetooth LE.
     """
@@ -19,7 +19,7 @@ class CoffeeMachineAPI:
 
     def __init__(self, address: str):
         """
-        Initializes the CoffeeMachineAPI with the BLE device address.
+        Initializes the CoffeeMachine with the BLE device address.
 
         Args:
             address: The BLE address of the coffee machine.
