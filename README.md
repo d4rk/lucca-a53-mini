@@ -1,6 +1,6 @@
 # Lucca A53 Mini BT LE Sniffer
 
-**UNDER DEVELOPMENT**
+> *_STILL UNDER DEVELOPMENT_*
 
 This project allows you to interact with S1 v.02.07 BLE devices, 
 which is the timer installed in [Lucca A53 Mini](https://clivecoffee.com/products/lucca-a53-mini-espresso-machine-by-la-spaziale?variant=39948235440216) Espresso machines.
@@ -15,6 +15,8 @@ The official app is the S1 Timer, which is very bare-bones.
 *   [Setup](#setup)
 *   [Usage](#usage)
 *   [Protocol Details](#protocol-details)
+
+![image of the A53 Mini](images/a53.jpg?raw=true)
 
 ## Setup
 
