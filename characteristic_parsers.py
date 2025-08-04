@@ -34,44 +34,12 @@ class TimerStateParser(CharacteristicParser):
         state = "Enabled" if value[0] == 0x01 else "Disabled"
         return [("Timer State", state)]
 
+from schedule_coder import ScheduleCoder
+
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
-    DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
     def parse_value(self, value):
-        if len(value) < 84:
-            return None
-
-        parsed_schedule_dict = {}
-        for day_index in range(7):
-            day_name = self.DAYS_OF_WEEK[day_index]
-            day_slots = []
-            for slot_index in range(3):
-                offset = (day_index * 3 + slot_index) * 4
-                slot_data = value[offset:offset+4]
-
-                # If all bytes in the slot are zero, it means the slot is not set
-                if not any(slot_data):
-                    continue
-
-                end_minute = slot_data[0]
-                end_hour = slot_data[1]
-                start_minute = slot_data[2]
-                start_hour_byte = slot_data[3]
-
-                start_hour = start_hour_byte & 0x7F
-                boiler_on = (start_hour_byte & 0x80) != 0
-
-                day_slots.append({
-                    "start": f"{start_hour:02d}:{start_minute:02d}",
-                    "end": f"{end_hour:02d}:{end_minute:02d}",
-                    "boiler_on": boiler_on
-                })
-            
-            if day_slots:
-                parsed_schedule_dict[day_name] = day_slots
-
-        return parsed_schedule_dict
+        return ScheduleCoder.decode_schedule(value)
 
 class BoilerParser(CharacteristicParser):
     """Parses a boiler's temperature and state characteristic."""

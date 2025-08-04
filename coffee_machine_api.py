@@ -2,6 +2,7 @@ import asyncio
 from bleak import BleakClient
 from ble_worker import BLEWorker
 from characteristic_parsers import get_parser
+from schedule_coder import ScheduleCoder
 
 class CoffeeMachineAPI:
     """
@@ -148,7 +149,7 @@ class CoffeeMachineAPI:
         # This is where you'd convert the high-level schedule_data dict
         # into the 84-byte bytearray format required by the UUID_SCHEDULE characteristic.
         # This encoding logic is complex and needs to be implemented.
-        encoded_schedule = self._encode_schedule(schedule_data)
+        encoded_schedule = ScheduleCoder.encode_schedule(schedule_data)
         
         print(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_SCHEDULE, encoded_schedule)
@@ -157,48 +158,7 @@ class CoffeeMachineAPI:
             raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
         print("Schedule command sent.")
 
-    def _encode_schedule(self, schedule_data: dict) -> bytearray:
-        """
-        Encodes the high-level schedule dictionary into the 84-byte bytearray format.
-        """
-        # Initialize an empty 84-byte bytearray (7 days * 3 slots * 4 bytes/slot)
-        encoded_bytes = bytearray(84)
-        
-        DAYS_OF_WEEK_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-
-        for day_index, day_name in enumerate(DAYS_OF_WEEK_ORDER):
-            slots = schedule_data.get(day_name, [])
-            for slot_index in range(3): # Max 3 slots per day
-                offset = (day_index * 3 + slot_index) * 4
-                
-                if slot_index < len(slots):
-                    slot = slots[slot_index]
-                    start_time_str = slot.get("start", "00:00")
-                    end_time_str = slot.get("end", "00:00")
-                    boiler_on = slot.get("boiler_on", False)
-
-                    start_hour, start_minute = map(int, start_time_str.split(':'))
-                    end_hour, end_minute = map(int, end_time_str.split(':'))
-
-                    # Reconstruct the 4-byte slot data based on our understanding
-                    # Byte 0: End Minute
-                    # Byte 1: End Hour
-                    # Byte 2: Start Minute
-                    # Byte 3: Start Hour (lower 7 bits) + Boiler On (MSB)
-
-                    encoded_bytes[offset] = end_minute
-                    encoded_bytes[offset + 1] = end_hour
-                    encoded_bytes[offset + 2] = start_minute
-                    
-                    start_hour_byte = start_hour & 0x7F # Mask out MSB
-                    if boiler_on:
-                        start_hour_byte |= 0x80 # Set MSB for boiler on
-                    encoded_bytes[offset + 3] = start_hour_byte
-                else:
-                    # If slot is not provided, ensure it's all zeros (disabled)
-                    encoded_bytes[offset:offset+4] = bytearray([0x00, 0x00, 0x00, 0x00])
-        
-        return encoded_bytes
+    
 
     async def start_polling(self, poll_interval: float):
         """
