@@ -1,5 +1,10 @@
+import struct
+
 class ScheduleCoder:
     DAYS_OF_WEEK_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    # Format string for a single 4-byte schedule slot: End Minute, End Hour, Start Minute, Start Hour (with boiler bit)
+    # Using little-endian byte order (not strictly necessary for single bytes, but good practice)
+    _SLOT_FORMAT = '<BBBB' 
 
     @staticmethod
     def encode_schedule(schedule_data: dict) -> bytearray:
@@ -22,20 +27,17 @@ class ScheduleCoder:
                     start_hour, start_minute = map(int, start_time_str.split(':'))
                     end_hour, end_minute = map(int, end_time_str.split(':'))
 
-                    # Reconstruct the 4-byte slot data based on our understanding
-                    # Byte 0: End Minute
-                    # Byte 1: End Hour
-                    # Byte 2: Start Minute
-                    # Byte 3: Start Hour (lower 7 bits) + Boiler On (MSB)
-
-                    encoded_bytes[offset] = end_minute
-                    encoded_bytes[offset + 1] = end_hour
-                    encoded_bytes[offset + 2] = start_minute
-                    
                     start_hour_byte = start_hour & 0x7F # Mask out MSB
                     if boiler_on:
                         start_hour_byte |= 0x80 # Set MSB for boiler on
-                    encoded_bytes[offset + 3] = start_hour_byte
+
+                    # Pack the data into 4 bytes
+                    packed_slot = struct.pack(ScheduleCoder._SLOT_FORMAT,
+                                              end_minute,
+                                              end_hour,
+                                              start_minute,
+                                              start_hour_byte)
+                    encoded_bytes[offset:offset+4] = packed_slot
                 else:
                     # If slot is not provided, ensure it's all zeros (disabled)
                     encoded_bytes[offset:offset+4] = bytearray([0x00, 0x00, 0x00, 0x00])
@@ -62,10 +64,8 @@ class ScheduleCoder:
                 if not any(slot_data):
                     continue
 
-                end_minute = slot_data[0]
-                end_hour = slot_data[1]
-                start_minute = slot_data[2]
-                start_hour_byte = slot_data[3]
+                # Unpack the 4 bytes
+                end_minute, end_hour, start_minute, start_hour_byte = struct.unpack(ScheduleCoder._SLOT_FORMAT, slot_data)
 
                 start_hour = start_hour_byte & 0x7F
                 boiler_on = (start_hour_byte & 0x80) != 0
