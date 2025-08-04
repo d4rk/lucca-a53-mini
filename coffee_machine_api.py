@@ -76,24 +76,6 @@ class CoffeeMachineAPI:
         
         return raw_characteristics_data
 
-    async def set_machine_power(self, on: bool):
-        """
-        Turns the coffee machine power on or off.
-
-        Args:
-            on: True to turn on, False to turn off.
-        """
-        if not self._is_connected:
-            raise ConnectionError("Not connected to the coffee machine.")
-
-        value = bytearray([0x01 if on else 0x00])
-        print(f"Setting machine power to {'On' if on else 'Off'} (writing {value.hex()} to {self.UUID_MACHINE_POWER})...")
-        write_result_queue = self._ble_worker.write_characteristic(self.UUID_MACHINE_POWER, value)
-        result = await asyncio.to_thread(write_result_queue.get)
-        if not result.get("success"):
-            raise Exception(f"Failed to set machine power: {result.get('error', 'Unknown error')}")
-        print("Machine power command sent.")
-
     async def set_timer_state(self, enabled: bool):
         """
         Enables or disables the schedule timer.
@@ -157,8 +139,6 @@ class CoffeeMachineAPI:
         if not result.get("success"):
             raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
         print("Schedule command sent.")
-
-    
 
     async def start_polling(self, poll_interval: float):
         """
