@@ -79,21 +79,26 @@ class BoilerParser(CharacteristicParser):
         if len(value) < 4:
             return None
 
-        heater_state_byte = value[1]
-        if heater_state_byte == 0x03:
-            heater_state = "At Temperature"
-        elif heater_state_byte == 0x02:
-            heater_state = "Heating"
-        else:
-            heater_state = "Idle"
+        results = []
 
+        # Temperature is always present
         temp_raw = int.from_bytes(value[0:2], 'little')
         temperature = temp_raw / 10.0
+        results.append((f"{self.name} Boiler Temp", f"{temperature} °C"))
 
-        return [
-            (f"{self.name} Boiler State", heater_state),
-            (f"{self.name} Boiler Temp", f"{temperature} °C"),
-        ]
+        # Boiler Status as percentage
+        status_code_byte = value[1]
+        percentage = 0.0
+        if self.name == "Brew":
+            max_val = 3.0
+            percentage = (status_code_byte / max_val) * 100 if max_val > 0 else 0
+        elif self.name == "Steam":
+            max_val = 4.0
+            percentage = (status_code_byte / max_val) * 100 if max_val > 0 else 0
+        
+        results.insert(0, (f"{self.name} Boiler Status", f"{percentage:.0f}%"))
+
+        return results
 
 # Parser registry
 PARSERS = {
