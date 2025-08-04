@@ -39,6 +39,7 @@ async def _select_device_address(initial_address: Optional[str]) -> Optional[str
 async def main():
     parser = argparse.ArgumentParser(description="Connect to S1 device and display status.")
     parser.add_argument('--address', type=str, help='BLE address of the S1 device.')
+    parser.add_argument('--power-on', action='store_true', help='Power on the coffee machine.')
 
     args = parser.parse_args()
 
@@ -49,12 +50,14 @@ async def main():
 
     machine = CoffeeMachine(address)
     try:
-        print(f"Connecting to {address}...")
         await machine.connect()
         print("Connected.")
 
         current_time = await machine.get_current_time()
         print(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+        if args.power_on:
+            await machine.power_on()
 
     except ConnectionError as e:
         print(f"Connection error: {e}")
@@ -64,7 +67,6 @@ async def main():
         if machine._is_connected:
             print("Disconnecting...")
             await machine.disconnect()
-            print("Disconnected.")
 
 if __name__ == "__main__":
     asyncio.run(main())
