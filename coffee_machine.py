@@ -1,8 +1,10 @@
 import asyncio
 from bleak import BleakClient
 from bt.ble_worker import BLEWorker
+from bt.ble_utils import discover_s1_devices
 from parsers.characteristic_parsers import get_parser
 from parsers.schedule_coder import ScheduleCoder
+from datetime import datetime
 
 class CoffeeMachine:
     """
@@ -140,6 +142,56 @@ class CoffeeMachine:
             raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
         print("Schedule command sent.")
 
+    
+
+    async def get_current_time(self) -> datetime:
+        """
+        Retrieves the current time from the machine.
+
+        Returns:
+            A datetime object representing the current time.
+        """
+        if not self._is_connected:
+            raise ConnectionError("Not connected to the coffee machine.")
+
+        print("Fetching current time...")
+        result_queue = self._ble_worker.read_characteristic(self.UUID_CURRENT_TIME)
+        raw_time_data = await asyncio.to_thread(result_queue.get)
+
+        if isinstance(raw_time_data, dict) and "error" in raw_time_data:
+            raise Exception(f"Error fetching current time: {raw_time_data['error']}")
+        
+        parser = get_parser(self.UUID_CURRENT_TIME)
+        if parser:
+            # The parser returns a list of (description, value) tuples. We need the value.
+            parsed_values = parser.parse_value(raw_time_data)
+            if parsed_values and len(parsed_values) > 0:
+                # Assuming the DateTimeParser returns a string in "YYYY-MM-DD HH:MM:SS" format
+                dt_str = parsed_values[0][1]
+                return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S")
+        raise Exception("Failed to parse current time.")
+
+    async def set_current_time(self, dt: datetime):
+        """
+        Sets the current time on the machine.
+
+        Args:
+            dt: A datetime object representing the time to set.
+        """
+        if not self._is_connected:
+            raise ConnectionError("Not connected to the coffee machine.")
+
+        # The year needs to be offset by 2000 for the machine's format
+        encoded_year = dt.year - 2000
+        value = bytearray([encoded_year, dt.month, dt.day, 0x00, dt.hour, dt.minute, 0x00]) # Seconds assumed to be 0
+        
+        print(f"Setting current time to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {self.UUID_CURRENT_TIME})...")
+        write_result_queue = self._ble_worker.write_characteristic(self.UUID_CURRENT_TIME, value)
+        result = await asyncio.to_thread(write_result_queue.get)
+        if not result.get("success"):
+            raise Exception(f"Failed to set current time: {result.get('error', 'Unknown error')}")
+        print("Current time command sent.")
+
     async def start_polling(self, poll_interval: float):
         """
         Starts polling all characteristics and returns a queue for results.
@@ -158,3 +210,13 @@ class CoffeeMachine:
             # but stopping the worker will stop polling.
             # For now, we'll just clear the reference.
             self._polling_result_queue = None
+
+    @staticmethod
+    async def discover():
+        """
+        Discovers available S1 coffee machines.
+
+        Returns:
+            A list of discovered S1 devices.
+        """
+        return await discover_s1_devices()

@@ -66,7 +66,7 @@ class BoilerParser(CharacteristicParser):
         elif self.name == "Steam":
             max_val = 4.0
             percentage = (status_code_byte / max_val) * 100 if max_val > 0 else 0
-        
+
         results.insert(0, (f"{self.name} Boiler Status", f"{percentage:.0f}%"))
 
         return results
@@ -74,7 +74,7 @@ class BoilerParser(CharacteristicParser):
 # Parser registry
 PARSERS = {
     "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
-    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Timer Time"),
+    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Last Sync Time"),
     "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
     "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
     "acab0002-77f5-479e-8711-b3b99198ce6c": BoilerParser("Brew"),
