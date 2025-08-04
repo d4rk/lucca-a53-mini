@@ -82,7 +82,16 @@ def _prepare_characteristic_data(char):
             try:
                 parsed_value = parser.parse_value(raw_value)
                 if parsed_value:
-                    parsed_list = parsed_value
+                    # Check if parsed_value is a dictionary (for schedule)
+                    if isinstance(parsed_value, dict):
+                        for day, slots in parsed_value.items():
+                            for slot in slots:
+                                parsed_list.append((
+                                    f"{day} {slot['start']}-{slot['end']}",
+                                    f"Boiler: {'ON' if slot['boiler_on'] else 'OFF'}"
+                                ))
+                    else:
+                        parsed_list = parsed_value
             except Exception:
                 parsed_list.append(("** Parsing failed **", ""))
 

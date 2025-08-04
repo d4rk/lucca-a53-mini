@@ -30,6 +30,15 @@ def main():
 
     ble_worker = BLEWorker()
     ble_worker.start()
+
+    # Connect to the device
+    connect_q = ble_worker.connect_device(address)
+    connect_result = connect_q.get()
+    if not connect_result.get("success"):
+        print(f"Failed to connect to {address}: {connect_result.get('error', 'Unknown error')}")
+        ble_worker.stop()
+        return
+
     result_queue = ble_worker.list_characteristics(address, poll_interval=args.poll)
     if args.poll > 0:
         curses_polling(result_queue)

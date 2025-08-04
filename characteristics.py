@@ -30,24 +30,31 @@ async def read_all_characteristics(client):
     return services_data
 
 
-async def list_characteristics(address, result_queue=None, poll_interval=0):
+async def list_characteristics(client, result_queue=None, poll_interval=0):
     try:
-        async with BleakClient(address) as client:
-            if not client.is_connected:
-                await client.connect()
+        if not client or not client.is_connected:
+            if result_queue:
+                result_queue.put({"error": "Client not connected"})
+            return
 
-            if poll_interval and poll_interval > 0:
-                if not result_queue:
-                    raise ValueError("A result_queue must be provided for polling.")
-                while True:
-                    data = await read_all_characteristics(client)
-                    result_queue.put(data)
-                    await asyncio.sleep(poll_interval)
-            else:
+        services = client.services
+        if services is None:
+            if result_queue:
+                result_queue.put({"error": "No services found or failed to fetch services."})
+            return
+
+        if poll_interval and poll_interval > 0:
+            if not result_queue:
+                raise ValueError("A result_queue must be provided for polling.")
+            while True:
                 data = await read_all_characteristics(client)
-                if result_queue:
-                    result_queue.put(data)
-                return data
+                result_queue.put(data)
+                await asyncio.sleep(poll_interval)
+        else:
+            data = await read_all_characteristics(client)
+            if result_queue:
+                result_queue.put(data)
+            return data
     except Exception as e:
         if result_queue:
             result_queue.put({"error": str(e)})

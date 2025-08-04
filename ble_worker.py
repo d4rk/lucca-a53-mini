@@ -2,6 +2,7 @@ import threading
 import asyncio
 import queue
 from characteristics import list_characteristics
+from bleak import BleakClient
 
 class BLEWorker:
     def __init__(self):
@@ -10,6 +11,7 @@ class BLEWorker:
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.loop = None
         self.running = False
+        self._client = None
 
     def start(self):
         self.running = True
@@ -19,16 +21,36 @@ class BLEWorker:
         if not self.running:
             return
         self.running = False
-        # Use put_nowait or a timeout to avoid blocking if the loop is dead
         try:
             self.cmd_queue.put_nowait(('stop', None))
         except queue.Full:
-            pass  # Loop is likely already shutting down
+            pass
         self.thread.join()
 
+    def connect_device(self, address):
+        q = queue.Queue()
+        self.cmd_queue.put(('connect', (address, q)))
+        return q
+
+    def disconnect_device(self):
+        q = queue.Queue()
+        self.cmd_queue.put(('disconnect', q))
+        return q
+
+    def read_characteristic(self, uuid):
+        q = queue.Queue()
+        self.cmd_queue.put(('read', (uuid, q)))
+        return q
+
+    def write_characteristic(self, uuid, value):
+        q = queue.Queue()
+        self.cmd_queue.put(('write', (uuid, value, q)))
+        return q
+
     def list_characteristics(self, address, poll_interval=0):
-        self.cmd_queue.put(('list_characteristics', (address, self.result_queue, poll_interval)))
-        return self.result_queue
+        q = queue.Queue()
+        self.cmd_queue.put(('list_characteristics', (address, q, poll_interval)))
+        return q
 
     def _run(self):
         self.loop = asyncio.new_event_loop()
@@ -43,31 +65,77 @@ class BLEWorker:
                     if cmd == 'stop':
                         break
                     
+                    elif cmd == 'connect':
+                        address, q = args
+                        try:
+                            self._client = BleakClient(address)
+                            await self._client.connect()
+                            q.put({"success": True})
+                        except Exception as e:
+                            q.put({"success": False, "error": str(e)})
+
+                    elif cmd == 'disconnect':
+                        q = args
+                        try:
+                            if self._client and self._client.is_connected:
+                                await self._client.disconnect()
+                            q.put({"success": True})
+                        except Exception as e:
+                            q.put({"success": False, "error": str(e)})
+                        finally:
+                            self._client = None
+
+                    elif cmd == 'read':
+                        uuid, q = args
+                        try:
+                            if self._client and self._client.is_connected:
+                                value = await self._client.read_gatt_char(uuid)
+                                q.put(value)
+                            else:
+                                q.put({"error": "Not connected"})
+                        except Exception as e:
+                            q.put({"error": str(e)})
+
+                    elif cmd == 'write':
+                        uuid, value, q = args
+                        try:
+                            if self._client and self._client.is_connected:
+                                await self._client.write_gatt_char(uuid, value)
+                                q.put({"success": True})
+                            else:
+                                q.put({"success": False, "error": "Not connected"})
+                        except Exception as e:
+                            q.put({"success": False, "error": str(e)})
+
                     elif cmd == 'list_characteristics':
+                        address, q, poll_interval = args
                         # If a polling task is already running, cancel it before starting a new one.
                         if polling_task and not polling_task.done():
                             polling_task.cancel()
 
-                        coro = list_characteristics(*args)
+                        # list_characteristics now takes the client directly for polling
+                        coro = list_characteristics(self._client, q, poll_interval)
                         task = self.loop.create_task(coro)
                         
-                        # If the command is for polling, keep a reference to the task.
-                        # The list_characteristics function itself handles the polling loop.
-                        if args[2] > 0:  # poll_interval
+                        if poll_interval > 0:
                             polling_task = task
 
                 except queue.Empty:
-                    # No command in the queue, continue the async loop.
                     pass
                 
-                # Yield control to the event loop to allow other tasks to run.
                 await asyncio.sleep(0.1)
 
-            # Cleanup: Cancel the polling task if it's still running
             if polling_task and not polling_task.done():
                 polling_task.cancel()
-                # Wait for the task to acknowledge cancellation
-                await asyncio.gather(polling_task, return_exceptions=True)
+                try:
+                    await asyncio.gather(polling_task, return_exceptions=True)
+                except asyncio.CancelledError:
+                    pass
+            
+            # Ensure client is disconnected on worker stop
+            if self._client and self._client.is_connected:
+                await self._client.disconnect()
+            self._client = None
 
         try:
             self.loop.run_until_complete(main_loop())
