@@ -12,10 +12,10 @@ class CoffeeMachine:
     """
 
     # Define characteristic UUIDs as class constants for clarity and easy access
-    UUID_MACHINE_POWER = "acab0002-67f5-479e-8711-b3b99198ce6c" # Timer State / Machine Power
+    UUID_TIMER_STATE = "acab0002-67f5-479e-8711-b3b99198ce6c" # Timer State / Machine Power
     UUID_SCHEDULE = "acab0003-67f5-479e-8711-b3b99198ce6c"
     UUID_CURRENT_TIME = "acab0005-67f5-479e-8711-b3b99198ce6c"
-    UUID_TIMER_TIME = "acab0004-67f5-479e-8711-b3b99198ce6c"
+    UUID_LAST_SYNC_TIME = "acab0004-67f5-479e-8711-b3b99198ce6c"
     UUID_BREW_BOILER = "acab0002-77f5-479e-8711-b3b99198ce6c"
     UUID_STEAM_BOILER = "acab0003-77f5-479e-8711-b3b99198ce6c"
 
@@ -75,7 +75,7 @@ class CoffeeMachine:
 
         if isinstance(raw_characteristics_data, dict) and "error" in raw_characteristics_data:
             raise Exception(f"Error fetching characteristics: {raw_characteristics_data['error']}")
-        
+
         return raw_characteristics_data
 
     async def set_timer_state(self, enabled: bool):
@@ -89,8 +89,8 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         value = bytearray([0x01 if enabled else 0x00])
-        print(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_MACHINE_POWER})...")
-        write_result_queue = self._ble_worker.write_characteristic(self.UUID_MACHINE_POWER, value)
+        print(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
+        write_result_queue = self._ble_worker.write_characteristic(self.UUID_TIMER_STATE, value)
         result = await asyncio.to_thread(write_result_queue.get)
         if not result.get("success"):
             raise Exception(f"Failed to set timer state: {result.get('error', 'Unknown error')}")
@@ -130,19 +130,14 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        # This is where you'd convert the high-level schedule_data dict
-        # into the 84-byte bytearray format required by the UUID_SCHEDULE characteristic.
-        # This encoding logic is complex and needs to be implemented.
         encoded_schedule = ScheduleCoder.encode_schedule(schedule_data)
-        
+
         print(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_SCHEDULE, encoded_schedule)
         result = await asyncio.to_thread(write_result_queue.get)
         if not result.get("success"):
             raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
         print("Schedule command sent.")
-
-    
 
     async def get_current_time(self) -> datetime:
         """
@@ -160,7 +155,7 @@ class CoffeeMachine:
 
         if isinstance(raw_time_data, dict) and "error" in raw_time_data:
             raise Exception(f"Error fetching current time: {raw_time_data['error']}")
-        
+
         parser = get_parser(self.UUID_CURRENT_TIME)
         if parser:
             # The parser returns a list of (description, value) tuples. We need the value.
@@ -184,7 +179,7 @@ class CoffeeMachine:
         # The year needs to be offset by 2000 for the machine's format
         encoded_year = dt.year - 2000
         value = bytearray([encoded_year, dt.month, dt.day, 0x00, dt.hour, dt.minute, 0x00]) # Seconds assumed to be 0
-        
+
         print(f"Setting current time to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {self.UUID_CURRENT_TIME})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_CURRENT_TIME, value)
         result = await asyncio.to_thread(write_result_queue.get)
@@ -206,7 +201,7 @@ class CoffeeMachine:
         Stops any active polling.
         """
         if self._polling_result_queue:
-            # There's no explicit stop polling command in ble_worker, 
+            # There's no explicit stop polling command in ble_worker,
             # but stopping the worker will stop polling.
             # For now, we'll just clear the reference.
             self._polling_result_queue = None
