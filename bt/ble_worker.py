@@ -1,7 +1,7 @@
 import threading
 import asyncio
 import queue
-from characteristics import list_characteristics
+from bt.characteristics import list_characteristics
 from bleak import BleakClient
 
 class BLEWorker:

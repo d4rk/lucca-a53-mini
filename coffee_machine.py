@@ -1,8 +1,8 @@
 import asyncio
 from bleak import BleakClient
-from ble_worker import BLEWorker
-from characteristic_parsers import get_parser
-from schedule_coder import ScheduleCoder
+from bt.ble_worker import BLEWorker
+from parsers.characteristic_parsers import get_parser
+from parsers.schedule_coder import ScheduleCoder
 
 class CoffeeMachine:
     """

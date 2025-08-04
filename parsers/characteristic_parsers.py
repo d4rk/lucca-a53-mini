@@ -34,7 +34,7 @@ class TimerStateParser(CharacteristicParser):
         state = "Enabled" if value[0] == 0x01 else "Disabled"
         return [("Timer State", state)]
 
-from schedule_coder import ScheduleCoder
+from parsers.schedule_coder import ScheduleCoder
 
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""

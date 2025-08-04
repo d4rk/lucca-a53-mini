@@ -1,9 +1,8 @@
 import argparse
 import asyncio
-from ble_utils import discover_s1_devices
-
-from ble_worker import BLEWorker
-from poll_display import curses_polling, format_ble_table
+from bt.ble_utils import discover_s1_devices
+from bt.ble_worker import BLEWorker
+from display.poll_display import curses_polling, format_ble_table
 
 def main():
 
