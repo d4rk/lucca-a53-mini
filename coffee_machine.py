@@ -60,6 +60,50 @@ class CoffeeMachine:
             self._is_connected = False
             self._log(f"Disconnected from {self._address}.")
 
+    async def get_brew_boiler_temp(self) -> dict:
+        """
+        Retrieves the brew boiler temperature and state.
+
+        Returns:
+            A dictionary with "temp" and "state".
+        """
+        return await self._get_boiler_data(self.UUID_BREW_BOILER, "Brew")
+
+    async def get_steam_boiler_temp(self) -> dict:
+        """
+        Retrieves the steam boiler temperature and state.
+
+        Returns:
+            A dictionary with "temp" and "state".
+        """
+        return await self._get_boiler_data(self.UUID_STEAM_BOILER, "Steam")
+
+    async def _get_boiler_data(self, uuid: str, name: str) -> dict:
+        """
+        Reads and parses boiler data from a given characteristic.
+        """
+        if not self._is_connected:
+            raise ConnectionError("Not connected to the coffee machine.")
+
+        self._log(f"Fetching {name} boiler data...")
+        result_queue = self._ble_worker.read_characteristic(uuid)
+        raw_data = await asyncio.to_thread(result_queue.get)
+
+        if isinstance(raw_data, dict) and "error" in raw_data:
+            raise Exception(f"Error fetching {name} boiler data: {raw_data['error']}")
+
+        parser = get_parser(uuid)
+        if parser:
+            parsed_data = parser.parse_value(raw_data)
+            if parsed_data and len(parsed_data) >= 2:
+                state_str = parsed_data[0][1]
+                temp_str = parsed_data[1][1]
+                return {
+                    "state": state_str,
+                    "temp": temp_str
+                }
+        return {"state": "Unknown", "temp": "Unknown"}
+
     async def set_timer_state(self, enabled: bool):
         """
         Enables or disables the schedule timer.

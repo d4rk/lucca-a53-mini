@@ -49,6 +49,8 @@ def main():
     schedule_group.add_argument('--disable-schedule', action='store_true', help='Disable the power schedule previously set on the machine.')
     parser.add_argument('--print-schedule', action='store_true', help='Prints the schedule in formatted JSON.')
     parser.add_argument('--set-schedule', action='store_true', help='Reads JSON from standard input and sets the schedule.')
+    parser.add_argument('--brew-boiler-temp', action='store_true', help='Prints the brew boiler temperature and state.')
+    parser.add_argument('--steam-boiler-temp', action='store_true', help='Prints the steam boiler temperature and state.')
 
     args = parser.parse_args()
     if len(sys.argv) == 1:
@@ -79,7 +81,7 @@ async def async_main(args):
         await machine.connect()
 
         if schedule_data:
-            #await machine.set_schedule(schedule_data)
+            await machine.set_schedule(schedule_data)
             print("Schedule set successfully.")
 
         if args.print_schedule:
@@ -97,6 +99,12 @@ async def async_main(args):
             await machine.set_timer_state(True)
         if args.disable_schedule:
             await machine.set_timer_state(False)
+        if args.print_brew_boiler_temp:
+            temp = await machine.get_brew_boiler_temp()
+            print(json.dumps(temp, indent=4))
+        if args.print_steam_boiler_temp:
+            temp = await machine.get_steam_boiler_temp()
+            print(json.dumps(temp, indent=4))
 
     except ConnectionError as e:
         print(f"Connection error: {e}")
