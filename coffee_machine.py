@@ -19,17 +19,25 @@ class CoffeeMachine:
     UUID_BREW_BOILER = "acab0002-77f5-479e-8711-b3b99198ce6c"
     UUID_STEAM_BOILER = "acab0003-77f5-479e-8711-b3b99198ce6c"
 
-    def __init__(self, address: str):
+    def __init__(self, address: str, logging_enabled: bool = True):
         """
         Initializes the CoffeeMachine with the BLE device address.
 
         Args:
             address: The BLE address of the coffee machine.
+            logging_enabled: Whether to enable logging. Defaults to True.
         """
         self._address = address
         self._ble_worker = BLEWorker()
         self._is_connected = False
-        self._polling_result_queue = None
+        self.logging_enabled = logging_enabled
+
+    def _log(self, message: str):
+        """
+        Prints a message if logging is enabled.
+        """
+        if self.logging_enabled:
+            print(message)
 
     async def connect(self):
         """
@@ -42,9 +50,9 @@ class CoffeeMachine:
             result = await asyncio.to_thread(connect_result_queue.get) # Blocking call in async context
             if result.get("success"):
                 self._is_connected = True
-                print(f"Connected to {self._address}.")
+                self._log(f"Connected to {self._address}.")
             else:
-                print(f"Failed to connect: {result.get('error', 'Unknown error')}")
+                self._log(f"Failed to connect: {result.get('error', 'Unknown error')}")
                 self._ble_worker.stop() # Stop worker if connection fails
                 raise ConnectionError(f"Failed to connect to {self._address}: {result.get('error', 'Unknown error')}")
 
@@ -57,26 +65,7 @@ class CoffeeMachine:
             await asyncio.to_thread(disconnect_result_queue.get) # Wait for disconnect confirmation
             self._ble_worker.stop()
             self._is_connected = False
-            print(f"Disconnected from {self._address}.")
-
-    async def get_status(self) -> list:
-        """
-        Reads and returns the current status of all relevant characteristics.
-
-        Returns:
-            A list of service dictionaries, each containing characteristic data.
-        """
-        if not self._is_connected:
-            raise ConnectionError("Not connected to the coffee machine.")
-
-        # Request all characteristics from the worker
-        result_queue = self._ble_worker.list_characteristics(self._address, poll_interval=0)
-        raw_characteristics_data = await asyncio.to_thread(result_queue.get) # Blocking call in async context
-
-        if isinstance(raw_characteristics_data, dict) and "error" in raw_characteristics_data:
-            raise Exception(f"Error fetching characteristics: {raw_characteristics_data['error']}")
-
-        return raw_characteristics_data
+            self._log(f"Disconnected from {self._address}.")
 
     async def set_timer_state(self, enabled: bool):
         """
@@ -89,12 +78,12 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         value = bytearray([0x01 if enabled else 0x00])
-        print(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
+        self._log(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_TIMER_STATE, value)
         result = await asyncio.to_thread(write_result_queue.get)
         if not result.get("success"):
             raise Exception(f"Failed to set timer state: {result.get('error', 'Unknown error')}")
-        print("Timer state command sent.")
+        self._log("Timer state command sent.")
 
     async def get_schedule(self) -> dict:
         """
@@ -106,7 +95,7 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        print("Fetching schedule...")
+        self._log("Fetching schedule...")
         result_queue = self._ble_worker.read_characteristic(self.UUID_SCHEDULE)
         raw_schedule_data = await asyncio.to_thread(result_queue.get)
 
@@ -132,12 +121,12 @@ class CoffeeMachine:
 
         encoded_schedule = ScheduleCoder.encode_schedule(schedule_data)
 
-        print(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
+        self._log(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_SCHEDULE, encoded_schedule)
         result = await asyncio.to_thread(write_result_queue.get)
         if not result.get("success"):
             raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
-        print("Schedule command sent.")
+        self._log("Schedule command sent.")
 
     async def get_current_time(self) -> datetime:
         """
@@ -149,7 +138,7 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        print("Fetching current time...")
+        self._log("Fetching current time...")
         result_queue = self._ble_worker.read_characteristic(self.UUID_CURRENT_TIME)
         raw_time_data = await asyncio.to_thread(result_queue.get)
 
@@ -184,25 +173,6 @@ class CoffeeMachine:
         """
         await self._set_time_characteristic(dt, self.UUID_LAST_SYNC_TIME, "last sync time")
 
-    async def start_polling(self, poll_interval: float):
-        """
-        Starts polling all characteristics and returns a queue for results.
-        """
-        if not self._is_connected:
-            raise ConnectionError("Not connected to the coffee machine.")
-        self._polling_result_queue = self._ble_worker.list_characteristics(self._address, poll_interval)
-        return self._polling_result_queue
-
-    async def stop_polling(self):
-        """
-        Stops any active polling.
-        """
-        if self._polling_result_queue:
-            # There's no explicit stop polling command in ble_worker,
-            # but stopping the worker will stop polling.
-            # For now, we'll just clear the reference.
-            self._polling_result_queue = None
-
     async def power_on(self):
         """
         Powers on the machine by setting a specific schedule and manipulating time.
@@ -210,21 +180,21 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        print("Powering on the machine...")
+        self._log("Powering on the machine...")
 
         # 1. Read the current schedule and save a copy of it to schedule.bak
-        print("Reading current schedule...")
+        self._log("Reading current schedule...")
         original_schedule = await self.get_schedule()
         try:
             import json
             with open("schedule.bak", "w") as f:
                 json.dump(original_schedule, f, indent=4)
-            print("Original schedule saved to schedule.bak")
+            self._log("Original schedule saved to schedule.bak")
         except Exception as e:
-            print(f"Warning: Could not save original schedule: {e}")
+            self._log(f"Warning: Could not save original schedule: {e}")
 
         # 2. Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
-        print("Setting new schedule...")
+        self._log("Setting new schedule...")
         new_schedule = {
             "Monday": [{
                 "start": "09:00",
@@ -239,35 +209,35 @@ class CoffeeMachine:
             "Sunday": []
         }
         await self.set_schedule(new_schedule)
-        print("New schedule set.")
+        self._log("New schedule set.")
 
         # 3. Setting the time to a date that is a Monday at 9AM.
-        print("Setting machine time to Monday 9AM...")
+        self._log("Setting machine time to Monday 9AM...")
         from datetime import datetime
         current_local_time = datetime.now() # Save current local time
         # Use a fixed Monday date for consistency, e.g., Jan 1, 2024 was a Monday
         monday_901am = datetime(2024, 1, 1, 9, 1, 0)
         await self.set_last_sync_time(monday_901am)
         await self.set_current_time(monday_901am)
-        print("Machine time set to Monday 9:01AM (within temp schedule).")
+        self._log("Machine time set to Monday 9:01AM (within temp schedule).")
 
         # Wait for 90 seconds to ensure the machine is ready
-        print("Waiting for 5 seconds to ensure the machine is ready...")
+        self._log("Waiting for 5 seconds to ensure the machine is ready...")
         await asyncio.sleep(5)
 
         # 4. Setting the time back to the current local time.
-        print("Setting machine time back to current local time...")
+        self._log("Setting machine time back to current local time...")
         current_local_time = datetime.now() # Save current local time
         await self.set_last_sync_time(current_local_time)
         await self.set_current_time(current_local_time)
-        print("Machine time set back to current local time.")
+        self._log("Machine time set back to current local time.")
 
         # 5. Restore the original schedule
-        print("Restoring original schedule...")
+        self._log("Restoring original schedule...")
         await self.set_schedule(original_schedule)
-        print("Original schedule restored.")
+        self._log("Original schedule restored.")
 
-        print("Machine powered on successfully.")
+        self._log("Machine powered on successfully.")
 
     def _encode_time_value(self, dt: datetime) -> bytearray:
         """
@@ -291,12 +261,12 @@ class CoffeeMachine:
 
         value = self._encode_time_value(dt)
 
-        print(f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})...")
+        self._log(f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})...")
         write_result_queue = self._ble_worker.write_characteristic(uuid, value)
         result = await asyncio.to_thread(write_result_queue.get)
         if not result.get("success"):
             raise Exception(f"Failed to set {description}: {result.get('error', 'Unknown error')}")
-        print(f"{description.capitalize()} command sent.")
+        self._log(f"{description.capitalize()} command sent.")
 
     @staticmethod
     async def discover():
