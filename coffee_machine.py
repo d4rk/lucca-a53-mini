@@ -32,13 +32,6 @@ class CoffeeMachine:
         self._is_connected = False
         self.logging_enabled = logging_enabled
 
-    def _log(self, message: str):
-        """
-        Prints a message if logging is enabled.
-        """
-        if self.logging_enabled:
-            print(message)
-
     async def connect(self):
         """
         Establishes a connection to the coffee machine.
@@ -188,7 +181,7 @@ class CoffeeMachine:
         try:
             import json
             with open("schedule.bak", "w") as f:
-                json.dump(original_schedule, f, indent=4)
+                json.dump(original_schedule, f)
             self._log("Original schedule saved to schedule.bak")
         except Exception as e:
             self._log(f"Warning: Could not save original schedule: {e}")
@@ -198,7 +191,7 @@ class CoffeeMachine:
         new_schedule = {
             "Monday": [{
                 "start": "09:00",
-                "end": "10:00",
+                "end": "21:00",
                 "boiler_on": True
             }],
             "Tuesday": [],
@@ -221,18 +214,17 @@ class CoffeeMachine:
         await self.set_current_time(monday_901am)
         self._log("Machine time set to Monday 9:01AM (within temp schedule).")
 
-        # Wait for 90 seconds to ensure the machine is ready
-        self._log("Waiting for 5 seconds to ensure the machine is ready...")
-        await asyncio.sleep(5)
+        # 4. Disabling the timer state to prevent auto-scheduling.
+        await self.set_timer_state(False)
 
-        # 4. Setting the time back to the current local time.
+        # 5. Setting the time back to the current local time.
         self._log("Setting machine time back to current local time...")
         current_local_time = datetime.now() # Save current local time
         await self.set_last_sync_time(current_local_time)
         await self.set_current_time(current_local_time)
         self._log("Machine time set back to current local time.")
 
-        # 5. Restore the original schedule
+        # 6. Restore the original schedule
         self._log("Restoring original schedule...")
         await self.set_schedule(original_schedule)
         self._log("Original schedule restored.")
@@ -267,6 +259,13 @@ class CoffeeMachine:
         if not result.get("success"):
             raise Exception(f"Failed to set {description}: {result.get('error', 'Unknown error')}")
         self._log(f"{description.capitalize()} command sent.")
+
+    def _log(self, message: str):
+        """
+        Prints a message if logging is enabled.
+        """
+        if self.logging_enabled:
+            print(message)
 
     @staticmethod
     async def discover():
