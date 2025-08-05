@@ -1,5 +1,7 @@
 import asyncio
 import argparse
+import json
+import sys
 from typing import Optional
 from coffee_machine import CoffeeMachine
 from datetime import datetime
@@ -36,12 +38,35 @@ async def _select_device_address(initial_address: Optional[str]) -> Optional[str
                     print("Invalid input. Please enter a number.")
     return address
 
-async def main():
-    parser = argparse.ArgumentParser(description="Connect to S1 device and display status.")
-    parser.add_argument('--address', type=str, help='BLE address of the S1 device.')
-    parser.add_argument('--power-on', action='store_true', help='Power on the coffee machine.')
+def main():
+    parser = argparse.ArgumentParser(description="Connects and controls the Lucca A53 espresso machine.", allow_abbrev=False)
+    parser.add_argument('--address', type=str, help='Optional BLE address of the S1 device. If not provided, it will auto discover the device.')
+    power_on_group = parser.add_mutually_exclusive_group()
+    power_on_group.add_argument('--power-on', action='store_true', help='Powers on the coffee machine. This will also disable the power schedule.')
+    power_on_group.add_argument('--power-off', action='store_true', help='Powers off the coffee machine. This will also disable the power schedule.')
+    schedule_group = parser.add_mutually_exclusive_group()
+    schedule_group.add_argument('--enable-schedule', action='store_true', help='Enables the power schedule previously set on the machine.')
+    schedule_group.add_argument('--disable-schedule', action='store_true', help='Disable the power schedule previously set on the machine.')
+    parser.add_argument('--print-schedule', action='store_true', help='Prints the schedule in formatted JSON.')
+    parser.add_argument('--set-schedule', action='store_true', help='Reads JSON from standard input and sets the schedule.')
 
     args = parser.parse_args()
+    if len(sys.argv) == 1:
+        parser.print_help()
+        return
+
+    asyncio.run(async_main(args))
+
+async def async_main(args):
+    schedule_data = None
+    if args.set_schedule:
+        try:
+            print("Reading schedule from standard input...")
+            schedule_data = json.load(sys.stdin)
+            print(f'Schedule data read: {schedule_data}')
+        except json.JSONDecodeError:
+            print("Error: Invalid JSON format in standard input.")
+            return
 
     address = await _select_device_address(args.address)
     if not address:
@@ -49,15 +74,29 @@ async def main():
         return
 
     machine = CoffeeMachine(address)
+    print("Connected.")
     try:
         await machine.connect()
-        print("Connected.")
 
-        current_time = await machine.get_current_time()
-        print(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        if schedule_data:
+            #await machine.set_schedule(schedule_data)
+            print("Schedule set successfully.")
+
+        if args.print_schedule:
+            schedule = await machine.get_schedule()
+            print(json.dumps(schedule, indent=4))
+        elif not args.set_schedule:
+            current_time = await machine.get_current_time()
+            print(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
         if args.power_on:
             await machine.power_on()
+        if args.power_off:
+            await machine.power_off()
+        if args.enable_schedule:
+            await machine.set_timer_state(True)
+        if args.disable_schedule:
+            await machine.set_timer_state(False)
 
     except ConnectionError as e:
         print(f"Connection error: {e}")
@@ -69,4 +108,4 @@ async def main():
             await machine.disconnect()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

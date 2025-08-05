@@ -186,12 +186,14 @@ class CoffeeMachine:
         except Exception as e:
             self._log(f"Warning: Could not save original schedule: {e}")
 
+        await self.set_timer_state(True)
+
         # 2. Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
         self._log("Setting new schedule...")
         new_schedule = {
             "Monday": [{
                 "start": "09:00",
-                "end": "21:00",
+                "end": "10:00",
                 "boiler_on": True
             }],
             "Tuesday": [],
@@ -203,6 +205,7 @@ class CoffeeMachine:
         }
         await self.set_schedule(new_schedule)
         self._log("New schedule set.")
+
 
         # 3. Setting the time to a date that is a Monday at 9AM.
         self._log("Setting machine time to Monday 9AM...")
@@ -230,6 +233,73 @@ class CoffeeMachine:
         self._log("Original schedule restored.")
 
         self._log("Machine powered on successfully.")
+
+    async def power_off(self):
+        """
+        Powers off the machine by setting a specific schedule and manipulating time.
+        """
+        if not self._is_connected:
+            raise ConnectionError("Not connected to the coffee machine.")
+
+        self._log("Powering off the machine...")
+
+
+        # 1. Read the current schedule and save a copy of it to schedule.bak
+        self._log("Reading current schedule...")
+        original_schedule = await self.get_schedule()
+        try:
+            import json
+            with open("schedule.bak", "w") as f:
+                json.dump(original_schedule, f)
+            self._log("Original schedule saved to schedule.bak")
+        except Exception as e:
+            self._log(f"Warning: Could not save original schedule: {e}")
+
+        await self.set_timer_state(True)
+
+        # 2. Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
+        self._log("Setting new schedule...")
+        new_schedule = {
+            "Monday": [{
+                "start": "09:00",
+                "end": "10:00",
+                "boiler_on": True
+            }],
+            "Tuesday": [],
+            "Wednesday": [],
+            "Thursday": [],
+            "Friday": [],
+            "Saturday": [],
+            "Sunday": []
+        }
+        await self.set_schedule(new_schedule)
+        self._log("New schedule set.")
+
+        # 3. Setting the time to a date that is a Monday at 10:01AM.
+        self._log("Setting machine time to Monday 10:01AM...")
+        from datetime import datetime
+        # Use a fixed Monday date for consistency, e.g., Jan 1, 2024 was a Monday
+        monday_1001am = datetime(2024, 1, 1, 10, 1, 0)
+        await self.set_last_sync_time(monday_1001am)
+        await self.set_current_time(monday_1001am)
+        self._log("Machine time set to Monday 10:01AM (outside temp schedule).")
+
+        # 4. Disabling the timer state to prevent auto-scheduling.
+        await self.set_timer_state(False)
+
+        # 5. Setting the time back to the current local time.
+        self._log("Setting machine time back to current local time...")
+        current_local_time = datetime.now() # Save current local time
+        await self.set_last_sync_time(current_local_time)
+        await self.set_current_time(current_local_time)
+        self._log("Machine time set back to current local time.")
+
+        # 6. Restore the original schedule
+        self._log("Restoring original schedule...")
+        await self.set_schedule(original_schedule)
+        self._log("Original schedule restored.")
+
+        self._log("Machine powered off successfully.")
 
     def _encode_time_value(self, dt: datetime) -> bytearray:
         """
