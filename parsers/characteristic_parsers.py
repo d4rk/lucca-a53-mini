@@ -8,6 +8,15 @@ class CharacteristicParser:
         """
         raise NotImplementedError
 
+    def encode_value(self, value):
+        """Encodes a value for a characteristic.
+
+        Returns:
+            A bytearray, or None.
+        """
+        raise NotImplementedError
+
+
 class DateTimeParser(CharacteristicParser):
     """Parses the datetime characteristic."""
     def __init__(self, description):
@@ -26,6 +35,19 @@ class DateTimeParser(CharacteristicParser):
             return [(self.description, dt_str)]
         return None
 
+    def encode_value(self, dt):
+        """Encodes a datetime object into a bytearray."""
+        return bytearray([
+            dt.year - 2000,
+            dt.month,
+            dt.day,
+            0,  # Unknown byte
+            dt.hour,
+            dt.minute,
+            dt.second
+        ])
+
+
 class TimerStateParser(CharacteristicParser):
     """Parses the timer state characteristic."""
     def parse_value(self, value):
@@ -34,12 +56,22 @@ class TimerStateParser(CharacteristicParser):
         state = "Enabled" if value[0] == 0x01 else "Disabled"
         return [("Timer State", state)]
 
+    def encode_value(self, enabled):
+        """Encodes a boolean state into a bytearray."""
+        return bytearray([0x01 if enabled else 0x00])
+
+
 from parsers.schedule_coder import ScheduleCoder
 
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
     def parse_value(self, value):
         return ScheduleCoder.decode_schedule(value)
+
+    def encode_value(self, schedule_data):
+        """Encodes schedule data into a bytearray."""
+        return ScheduleCoder.encode_schedule(schedule_data)
+
 
 class BoilerParser(CharacteristicParser):
     """Parses a boiler's temperature and state characteristic."""
@@ -70,6 +102,10 @@ class BoilerParser(CharacteristicParser):
         results.insert(0, (f"{self.name} Boiler Status", f"{percentage:.0f}%"))
 
         return results
+
+    def encode_value(self, value):
+        """Boiler characteristics are read-only."""
+        raise NotImplementedError("Boiler characteristics are read-only.")
 
 # Parser registry
 PARSERS = {

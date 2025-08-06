@@ -96,13 +96,13 @@ async def async_main(args):
         if args.power_off:
             await machine.power_off()
         if args.enable_schedule:
-            await machine.set_timer_state(True)
+            await machine.enable_schedule(True)
         if args.disable_schedule:
-            await machine.set_timer_state(False)
-        if args.print_brew_boiler_temp:
+            await machine.enable_schedule(False)
+        if args.brew_boiler_temp:
             temp = await machine.get_brew_boiler_temp()
             print(json.dumps(temp, indent=4))
-        if args.print_steam_boiler_temp:
+        if args.steam_boiler_temp:
             temp = await machine.get_steam_boiler_temp()
             print(json.dumps(temp, indent=4))
 

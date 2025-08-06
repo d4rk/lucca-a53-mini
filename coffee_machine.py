@@ -3,8 +3,7 @@ from bleak import BleakClient
 from bt.ble_worker import BLEWorker
 from bt.ble_utils import discover_s1_devices
 from parsers.characteristic_parsers import get_parser
-from parsers.schedule_coder import ScheduleCoder
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class CoffeeMachine:
     """
@@ -18,6 +17,9 @@ class CoffeeMachine:
     UUID_LAST_SYNC_TIME = "acab0004-67f5-479e-8711-b3b99198ce6c"
     UUID_BREW_BOILER = "acab0002-77f5-479e-8711-b3b99198ce6c"
     UUID_STEAM_BOILER = "acab0003-77f5-479e-8711-b3b99198ce6c"
+
+    POWER_ON = True
+    POWER_OFF = False
 
     def __init__(self, address: str, logging_enabled: bool = True):
         """
@@ -104,7 +106,7 @@ class CoffeeMachine:
                 }
         return {"state": "Unknown", "temp": "Unknown"}
 
-    async def set_timer_state(self, enabled: bool):
+    async def enable_schedule(self, enabled: bool):
         """
         Enables or disables the schedule timer.
 
@@ -114,7 +116,11 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        value = bytearray([0x01 if enabled else 0x00])
+        parser = get_parser(self.UUID_TIMER_STATE)
+        if not parser:
+            raise Exception(f"No parser found for UUID {self.UUID_TIMER_STATE}")
+
+        value = parser.encode_value(enabled)
         self._log(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_TIMER_STATE, value)
         result = await asyncio.to_thread(write_result_queue.get)
@@ -156,7 +162,11 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        encoded_schedule = ScheduleCoder.encode_schedule(schedule_data)
+        parser = get_parser(self.UUID_SCHEDULE)
+        if not parser:
+            raise Exception(f"No parser found for UUID {self.UUID_SCHEDULE}")
+
+        encoded_schedule = parser.encode_value(schedule_data)
 
         self._log(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
         write_result_queue = self._ble_worker.write_characteristic(self.UUID_SCHEDULE, encoded_schedule)
@@ -214,94 +224,32 @@ class CoffeeMachine:
         """
         Powers on the machine by setting a specific schedule and manipulating time.
         """
-        if not self._is_connected:
-            raise ConnectionError("Not connected to the coffee machine.")
-
         self._log("Powering on the machine...")
-
-        # 1. Read the current schedule and save a copy of it to schedule.bak
-        self._log("Reading current schedule...")
-        original_schedule = await self.get_schedule()
-        try:
-            import json
-            with open("schedule.bak", "w") as f:
-                json.dump(original_schedule, f)
-            self._log("Original schedule saved to schedule.bak")
-        except Exception as e:
-            self._log(f"Warning: Could not save original schedule: {e}")
-
-        await self.set_timer_state(True)
-
-        # 2. Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
-        self._log("Setting new schedule...")
-        new_schedule = {
-            "Monday": [{
-                "start": "09:00",
-                "end": "10:00",
-                "boiler_on": True
-            }],
-            "Tuesday": [],
-            "Wednesday": [],
-            "Thursday": [],
-            "Friday": [],
-            "Saturday": [],
-            "Sunday": []
-        }
-        await self.set_schedule(new_schedule)
-        self._log("New schedule set.")
-
-
-        # 3. Setting the time to a date that is a Monday at 9AM.
-        self._log("Setting machine time to Monday 9AM...")
-        from datetime import datetime
-        current_local_time = datetime.now() # Save current local time
-        # Use a fixed Monday date for consistency, e.g., Jan 1, 2024 was a Monday
-        monday_901am = datetime(2024, 1, 1, 9, 1, 0)
-        await self.set_last_sync_time(monday_901am)
-        await self.set_current_time(monday_901am)
-        self._log("Machine time set to Monday 9:01AM (within temp schedule).")
-
-        # 4. Disabling the timer state to prevent auto-scheduling.
-        await self.set_timer_state(False)
-
-        # 5. Setting the time back to the current local time.
-        self._log("Setting machine time back to current local time...")
-        current_local_time = datetime.now() # Save current local time
-        await self.set_last_sync_time(current_local_time)
-        await self.set_current_time(current_local_time)
-        self._log("Machine time set back to current local time.")
-
-        # 6. Restore the original schedule
-        self._log("Restoring original schedule...")
-        await self.set_schedule(original_schedule)
-        self._log("Original schedule restored.")
-
+        await self._set_power_state(self.POWER_ON)
         self._log("Machine powered on successfully.")
 
     async def power_off(self):
         """
         Powers off the machine by setting a specific schedule and manipulating time.
         """
+        self._log("Powering off the machine...")
+        await self._set_power_state(self.POWER_OFF)
+        self._log("Machine powered off successfully.")
+
+    async def _set_power_state(self, power_state: bool):
+        """
+        Sets the power state of the machine by setting a specific schedule and manipulating time.
+        """
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        self._log("Powering off the machine...")
-
-
-        # 1. Read the current schedule and save a copy of it to schedule.bak
+        # Read the current schedule and save a copy of it to schedule.bak
         self._log("Reading current schedule...")
         original_schedule = await self.get_schedule()
-        try:
-            import json
-            with open("schedule.bak", "w") as f:
-                json.dump(original_schedule, f)
-            self._log("Original schedule saved to schedule.bak")
-        except Exception as e:
-            self._log(f"Warning: Could not save original schedule: {e}")
+        self._backup_schedule(original_schedule)
+        await self.enable_schedule(True)
 
-        await self.set_timer_state(True)
-
-        # 2. Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
+        # Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
         self._log("Setting new schedule...")
         new_schedule = {
             "Monday": [{
@@ -319,39 +267,36 @@ class CoffeeMachine:
         await self.set_schedule(new_schedule)
         self._log("New schedule set.")
 
-        # 3. Setting the time to a date that is a Monday at 10:01AM.
-        self._log("Setting machine time to Monday 10:01AM...")
-        from datetime import datetime
-        # Use a fixed Monday date for consistency, e.g., Jan 1, 2024 was a Monday
-        monday_1001am = datetime(2024, 1, 1, 10, 1, 0)
-        await self.set_last_sync_time(monday_1001am)
-        await self.set_current_time(monday_1001am)
-        self._log("Machine time set to Monday 10:01AM (outside temp schedule).")
+        # Setting the time to the specified time.
+        if power_state == self.POWER_ON:
+            time = datetime(2024, 1, 1, 9, 5, 0)
+            self._log(f"Setting machine time to Monday 9:01AM (within temp schedule).")
+        else:
+            time = datetime(2024, 1, 1, 10, 5, 0)
+            self._log(f"Setting machine time to Monday 10:01AM (outside temp schedule).")
 
-        # 4. Disabling the timer state to prevent auto-scheduling.
-        await self.set_timer_state(False)
+        last_sync_time = time - timedelta(minutes=1)
+        await self.set_last_sync_time(last_sync_time)
+        await self.set_current_time(time)
+        self._log("Machine time set.")
 
-        # 5. Setting the time back to the current local time.
+        await asyncio.sleep(1)  # Wait for the machine to process the change
+        # Disabling the timer state to prevent auto-scheduling.
+        await self.enable_schedule(False)
+        await asyncio.sleep(1)  # Wait for the machine to process the change
+
+        # Setting the time back to the current local time.
         self._log("Setting machine time back to current local time...")
-        current_local_time = datetime.now() # Save current local time
+        current_local_time = datetime.now()
+        last_sync_time = current_local_time - timedelta(minutes=1)
         await self.set_last_sync_time(current_local_time)
         await self.set_current_time(current_local_time)
         self._log("Machine time set back to current local time.")
 
-        # 6. Restore the original schedule
+        # Restore the original schedule
         self._log("Restoring original schedule...")
         await self.set_schedule(original_schedule)
         self._log("Original schedule restored.")
-
-        self._log("Machine powered off successfully.")
-
-    def _encode_time_value(self, dt: datetime) -> bytearray:
-        """
-        Encodes a datetime object into the 7-byte format required by the machine.
-        Seconds are assumed to be 0.
-        """
-        encoded_year = dt.year - 2000
-        return bytearray([encoded_year, dt.month, dt.day, 0x00, dt.hour, dt.minute, 0x00])
 
     async def _set_time_characteristic(self, dt: datetime, uuid: str, description: str):
         """
@@ -365,7 +310,11 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        value = self._encode_time_value(dt)
+        parser = get_parser(uuid)
+        if not parser:
+            raise Exception(f"No parser found for UUID {uuid}")
+
+        value = parser.encode_value(dt)
 
         self._log(f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})...")
         write_result_queue = self._ble_worker.write_characteristic(uuid, value)
@@ -380,6 +329,20 @@ class CoffeeMachine:
         """
         if self.logging_enabled:
             print(message)
+
+    def _backup_schedule(self, schedule_data: dict):
+        """
+        Saves the current schedule to a backup file.
+        """
+        try:
+            import json
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_filename = f"schedule.{timestamp}.json"
+            with open(backup_filename, "w") as f:
+                json.dump(schedule_data, f)
+            self._log(f"Original schedule saved to {backup_filename}")
+        except Exception as e:
+            self._log(f"Warning: Could not save original schedule: {e}")
 
     @staticmethod
     async def discover():
