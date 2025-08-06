@@ -3,6 +3,9 @@ import asyncio
 from bt.ble_utils import discover_s1_devices
 from bt.ble_worker import BLEWorker
 from display.poll_display import curses_polling, format_ble_table
+from common.logging import get_logger
+
+L = get_logger(__name__)
 
 def main():
 
@@ -18,7 +21,7 @@ def main():
         return
     if len(s1_devices) == 1:
         address = s1_devices[0].address
-        print(f"Automatically connecting to {s1_devices[0].name} ({address})")
+        L.info(f"Automatically connecting to {s1_devices[0].name} ({address})")
     else:
         idx = input("Select device index to connect (or enter address manually): ")
         try:
@@ -34,7 +37,7 @@ def main():
     connect_q = ble_worker.connect_device(address)
     connect_result = connect_q.get()
     if not connect_result.get("success"):
-        print(f"Failed to connect to {address}: {connect_result.get('error', 'Unknown error')}")
+        L.error(f"Failed to connect to {address}: {connect_result.get('error', 'Unknown error')}")
         ble_worker.stop()
         return
 
@@ -44,7 +47,7 @@ def main():
     else:
         result = result_queue.get()  # Blocking wait for result
         if isinstance(result, dict) and 'error' in result:
-            print(f"An error occurred: {result['error']}")
+            L.error(f"An error occurred: {result['error']}")
         else:
             lines = format_ble_table(result)
             for line in lines:

@@ -5,25 +5,28 @@ import sys
 from typing import Optional
 from coffee_machine import CoffeeMachine
 from datetime import datetime
+from common.logging import get_logger
 
 from parsers.characteristic_parsers import get_parser
+
+L = get_logger(__name__)
 
 async def _select_device_address(initial_address: Optional[str]) -> Optional[str]:
     address = initial_address
     if not address:
-        print("Discovering S1 devices...")
+        L.info("Discovering S1 devices...")
         s1_devices = await CoffeeMachine.discover()
         if not s1_devices:
-            print("No S1 devices found.")
+            L.info("No S1 devices found.")
             return None
 
         if len(s1_devices) == 1:
             address = s1_devices[0].address
-            print(f"Automatically selecting {s1_devices[0].name} ({address})")
+            L.info(f"Automatically selecting {s1_devices[0].name} ({address})")
         else:
-            print("Multiple S1 devices found:")
+            L.info("Multiple S1 devices found:")
             for i, device in enumerate(s1_devices):
-                print(f"  [{i}] {device.name} ({device.address})")
+                L.info(f"  [{i}] {device.name} ({device.address})")
 
             while True:
                 try:
@@ -33,9 +36,9 @@ async def _select_device_address(initial_address: Optional[str]) -> Optional[str
                         address = s1_devices[idx].address
                         break
                     else:
-                        print("Invalid index. Please try again.")
+                        L.warning("Invalid index. Please try again.")
                 except ValueError:
-                    print("Invalid input. Please enter a number.")
+                    L.warning("Invalid input. Please enter a number.")
     return address
 
 def main():
@@ -63,33 +66,33 @@ async def async_main(args):
     schedule_data = None
     if args.set_schedule:
         try:
-            print("Reading schedule from standard input...")
+            L.info("Reading schedule from standard input...")
             schedule_data = json.load(sys.stdin)
-            print(f'Schedule data read: {schedule_data}')
+            L.info(f'Schedule data read: {schedule_data}')
         except json.JSONDecodeError:
-            print("Error: Invalid JSON format in standard input.")
+            L.error("Error: Invalid JSON format in standard input.")
             return
 
     address = await _select_device_address(args.address)
     if not address:
-        print("No device selected or address provided. Exiting.")
+        L.error("No device selected or address provided. Exiting.")
         return
 
     machine = CoffeeMachine(address)
-    print("Connected.")
+    L.info("Connected.")
     try:
         await machine.connect()
 
         if schedule_data:
             await machine.set_schedule(schedule_data)
-            print("Schedule set successfully.")
+            L.info("Schedule set successfully.")
 
         if args.print_schedule:
             schedule = await machine.get_schedule()
             print(json.dumps(schedule, indent=4))
         elif not args.set_schedule:
             current_time = await machine.get_current_time()
-            print(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
+            L.info(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
 
         if args.power_on:
             await machine.power_on()
@@ -107,12 +110,12 @@ async def async_main(args):
             print(json.dumps(temp, indent=4))
 
     except ConnectionError as e:
-        print(f"Connection error: {e}")
+        L.error(f"Connection error: {e}")
     except Exception as e:
-        print(f"An error occurred: {e}")
+        L.error(f"An error occurred: {e}")
     finally:
         if machine._is_connected:
-            print("Disconnecting...")
+            L.info("Disconnecting...")
             await machine.disconnect()
 
 if __name__ == "__main__":
