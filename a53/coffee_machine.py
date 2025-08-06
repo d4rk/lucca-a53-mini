@@ -1,10 +1,10 @@
 import asyncio
 from bleak import BleakClient
-from bt.ble_worker import BLEWorker
-from bt.ble_utils import discover_s1_devices
-from parsers.characteristic_parsers import get_parser
+from a53.bt.ble_worker import BLEWorker
+from a53.bt.ble_utils import discover_s1_devices
+from a53.parsers.characteristic_parsers import get_parser
 from datetime import datetime, timedelta
-from common.logging import get_logger
+from a53.common.logging import get_logger
 
 L = get_logger(__name__)
 

@@ -1,9 +1,9 @@
 import argparse
 import asyncio
-from bt.ble_utils import discover_s1_devices
-from bt.ble_worker import BLEWorker
-from display.poll_display import curses_polling, format_ble_table
-from common.logging import get_logger
+from a53.bt.ble_utils import discover_s1_devices
+from a53.bt.ble_worker import BLEWorker
+from a53.display.poll_display import curses_polling, format_ble_table
+from a53.common.logging import get_logger
 
 L = get_logger(__name__)
 

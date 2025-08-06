@@ -3,11 +3,11 @@ import argparse
 import json
 import sys
 from typing import Optional
-from coffee_machine import CoffeeMachine
+from a53.coffee_machine import CoffeeMachine
 from datetime import datetime
-from common.logging import get_logger
+from a53.common.logging import get_logger
 
-from parsers.characteristic_parsers import get_parser
+from a53.parsers.characteristic_parsers import get_parser
 
 L = get_logger(__name__)
 

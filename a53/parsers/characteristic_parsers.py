@@ -61,7 +61,7 @@ class TimerStateParser(CharacteristicParser):
         return bytearray([0x01 if enabled else 0x00])
 
 
-from parsers.schedule_coder import ScheduleCoder
+from a53.parsers.schedule_coder import ScheduleCoder
 
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""

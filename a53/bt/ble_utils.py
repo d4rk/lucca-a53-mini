@@ -1,5 +1,5 @@
 from bleak import BleakScanner
-from common.logging import get_logger
+from a53.common.logging import get_logger
 
 L = get_logger(__name__)
 

@@ -1,6 +1,6 @@
 import curses
 import queue
-from parsers.characteristic_parsers import get_parser
+from a53.parsers.characteristic_parsers import get_parser
 
 def format_ble_table(data, max_lines=None, max_cols=None):
     if not isinstance(data, list):
