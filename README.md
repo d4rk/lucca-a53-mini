@@ -2,7 +2,7 @@
 
 > *_STILL UNDER DEVELOPMENT_*
 
-This project allows you to interact with S1 v.02.07 BLE devices, 
+This project allows you to interact with S1 v.02.07 BLE devices,
 which is the timer installed in [Lucca A53 Mini](https://clivecoffee.com/products/lucca-a53-mini-espresso-machine-by-la-spaziale?variant=39948235440216) Espresso machines.
 
 The A53 is a custom built variant of the [La Spaziale Mini Vivaldi II](https://clivecoffee.com/products/la-spaziale-mini-vivaldi-ii-espresso-machine),
@@ -39,35 +39,62 @@ The official app is the S1 Timer, which is very bare-bones.
 
 ## Usage
 
-To run the program, execute `main.py`:
+This project has two main programs:
+
+1.  `scanner.py`: A command-line tool to scan for and display information from the coffee machine.
+2.  `controller.py`: A command-line tool to control the coffee machine's settings.
+
+### `scanner.py`
+
+To run the scanner, execute `scanner.py`:
 
 ```bash
-python3 main.py
+python3 scanner.py
 ```
 
-### Arguments:
+**Arguments:**
 
 *   `--poll <interval>`: Enables continuous polling of BLE characteristics at the specified interval in seconds. If omitted, the characteristics will be read only once.
 
     Example (one-time read):
     ```bash
-    python3 main.py
+    python3 scanner.py
     ```
 
     Example (poll every second):
     ```bash
-    python3 main.py --poll 1
+    python3 scanner.py --poll 1
     ```
 
-### Device Selection:
+**Device Selection:**
 
-Upon running `main.py`, the program will attempt to discover S1 devices. If multiple devices are found, you will be prompted to select a device by its index or to manually enter a BLE address.
+Upon running `scanner.py`, the program will attempt to discover S1 devices. If multiple devices are found, you will be prompted to select a device by its index or to manually enter a BLE address.
 
 If only one S1 device is found, it will automatically connect to it.
 
-### Interactive Polling Display:
+**Interactive Polling Display:**
 
 When using the `--poll` argument, an interactive curses-based display will be used to show the polled data in real-time. Press `q` to quit the polling display.
+
+### `controller.py`
+
+To run the controller, execute `controller.py` with one of the available arguments:
+
+```bash
+python3 controller.py [argument]
+```
+
+**Arguments:**
+
+*   `--power-on`: Powers on the coffee machine. This will also disable the power schedule.
+*   `--power-off`: Powers off the coffee machine. This will also disable the power schedule.
+*   `--enable-schedule`: Enables the power schedule previously set on the machine.
+*   `--disable-schedule`: Disables the power schedule previously set on the machine.
+*   `--print-schedule`: Prints the schedule in formatted JSON.
+*   `--set-schedule`: Reads JSON from standard input and sets the schedule.
+*   `--brew-boiler-temp`: Prints the brew boiler temperature and state.
+*   `--steam-boiler-temp`: Prints the steam boiler temperature and state.
+*   `--address <address>`: Optional BLE address of the S1 device. If not provided, it will auto discover the device.
 
 ## Protocol Details
 
