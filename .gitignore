@@ -1,0 +1,5 @@
+*schedule.bak*
+__pycache__/
+*.pyc
+*.pyo
+*.json
