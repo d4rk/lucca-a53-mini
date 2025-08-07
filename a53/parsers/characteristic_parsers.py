@@ -1,3 +1,12 @@
+from a53.parsers.constants import (
+    UUID_CURRENT_TIME,
+    UUID_LAST_SYNC_TIME,
+    UUID_SCHEDULE,
+    UUID_TIMER_STATE,
+    UUID_BREW_BOILER,
+    UUID_STEAM_BOILER,
+)
+
 class CharacteristicParser:
     """Base class for characteristic parsers."""
     def parse_value(self, value):
@@ -109,12 +118,12 @@ class BoilerParser(CharacteristicParser):
 
 # Parser registry
 PARSERS = {
-    "acab0005-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Current Time"),
-    "acab0004-67f5-479e-8711-b3b99198ce6c": DateTimeParser("Last Sync Time"),
-    "acab0003-67f5-479e-8711-b3b99198ce6c": ScheduleParser(),
-    "acab0002-67f5-479e-8711-b3b99198ce6c": TimerStateParser(),
-    "acab0002-77f5-479e-8711-b3b99198ce6c": BoilerParser("Brew"),
-    "acab0003-77f5-479e-8711-b3b99198ce6c": BoilerParser("Steam"),
+    UUID_CURRENT_TIME: DateTimeParser("Current Time"),
+    UUID_LAST_SYNC_TIME: DateTimeParser("Last Sync Time"),
+    UUID_SCHEDULE: ScheduleParser(),
+    UUID_TIMER_STATE: TimerStateParser(),
+    UUID_BREW_BOILER: BoilerParser("Brew"),
+    UUID_STEAM_BOILER: BoilerParser("Steam"),
 }
 
 def get_parser(uuid):

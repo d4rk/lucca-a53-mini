@@ -1,5 +1,4 @@
 import asyncio
-from bleak import BleakClient
 from a53.bt.ble_worker import BLEWorker
 from a53.bt.ble_utils import discover_s1_devices
 from a53.parsers.characteristic_parsers import get_parser
@@ -13,13 +12,14 @@ class CoffeeMachine:
     A high-level API for controlling the coffee machine via Bluetooth LE.
     """
 
-    # Define characteristic UUIDs as class constants for clarity and easy access
-    UUID_TIMER_STATE = "acab0002-67f5-479e-8711-b3b99198ce6c" # Timer State / Machine Power
-    UUID_SCHEDULE = "acab0003-67f5-479e-8711-b3b99198ce6c"
-    UUID_CURRENT_TIME = "acab0005-67f5-479e-8711-b3b99198ce6c"
-    UUID_LAST_SYNC_TIME = "acab0004-67f5-479e-8711-b3b99198ce6c"
-    UUID_BREW_BOILER = "acab0002-77f5-479e-8711-b3b99198ce6c"
-    UUID_STEAM_BOILER = "acab0003-77f5-479e-8711-b3b99198ce6c"
+    from a53.parsers.constants import (
+        UUID_TIMER_STATE,
+        UUID_SCHEDULE,
+        UUID_CURRENT_TIME,
+        UUID_LAST_SYNC_TIME,
+        UUID_BREW_BOILER,
+        UUID_STEAM_BOILER,
+    )
 
     POWER_ON = True
     POWER_OFF = False
