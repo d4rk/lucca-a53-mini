@@ -2,6 +2,7 @@ import curses
 import queue
 from a53.parsers.characteristic_parsers import get_parser
 
+
 def format_ble_table(data, max_lines=None, max_cols=None):
     if not isinstance(data, list):
         s_lines = str(data).splitlines()
@@ -11,6 +12,7 @@ def format_ble_table(data, max_lines=None, max_cols=None):
         return _format_console_output(data)
     else:
         return _format_curses_output(data, max_lines, max_cols)
+
 
 def curses_polling(result_queue):
     def poll_loop(stdscr):
@@ -28,8 +30,18 @@ def curses_polling(result_queue):
                 for idx, line in enumerate(lines):
                     if idx >= max_lines:
                         break
-                    stdscr.addstr(idx, 0, line)
-                stdscr.addstr(curses.LINES-1, 0, "Press 'q' to quit.")
+                    try:
+                        stdscr.addstr(idx, 0, line)
+                    except curses.error:
+                        pass  # Ignore lines that fail to draw, e.g. on resize
+
+                quit_msg = "Press 'q' to quit."
+                if curses.LINES > 0:
+                    try:
+                        # Truncate quit message to fit available columns
+                        stdscr.addstr(curses.LINES - 1, 0, quit_msg[:max_cols])
+                    except curses.error:
+                        pass  # Ignore if it fails
                 stdscr.refresh()
             try:
                 c = stdscr.getch()
@@ -37,7 +49,8 @@ def curses_polling(result_queue):
                     break
             except Exception:
                 pass
-    curses.wrapper( poll_loop)
+    curses.wrapper(poll_loop)
+
 
 def _wrap_text(text, width):
     """Wraps text to a given width, returning a list of lines."""
@@ -49,6 +62,7 @@ def _wrap_text(text, width):
         lines.append(current_text[:width])
         current_text = current_text[width:]
     return lines
+
 
 def _prepare_characteristic_data(char):
     """Extracts and pre-processes data for a single characteristic."""
@@ -103,6 +117,7 @@ def _prepare_characteristic_data(char):
         'value_chunks': value_chunks
     }
 
+
 def _format_console_output(data):
     """Formats data for detailed console output."""
     lines = []
@@ -128,14 +143,24 @@ def _format_console_output(data):
             lines.append('')
     return lines
 
+
 def _format_curses_output(data, max_lines, max_cols):
     """Formats data for tabulated curses output."""
     lines = []
+
+    # Define column widths, ensuring 'parsed' width is not negative.
+    name_width = 36
+    props_width = 10
+    value_width = 40
+    # 3 characters for " | " separators
+    fixed_width = name_width + props_width + value_width + 3
+    parsed_width = max(0, max_cols - fixed_width)
+
     COL_WIDTHS = {
-        'name': 36,
-        'props': 10,
-        'value': 40,
-        'parsed': max_cols - 36 - 10 - 40 - 3 # Remaining width after other columns and spaces
+        'name': name_width,
+        'props': props_width,
+        'value': value_width,
+        'parsed': parsed_width
     }
     char_header = f"{'Characteristic':<{COL_WIDTHS['name']}} | {'Properties':<{COL_WIDTHS['props']}} | {'Value (hex)':<{COL_WIDTHS['value']}} | {'Parsed':<{COL_WIDTHS['parsed']}}"
     lines.append(char_header[:max_cols])
@@ -178,9 +203,9 @@ def _format_curses_output(data, max_lines, max_cols):
                 parsed_part = parsed_lines[i] if i < len(parsed_lines) else ""
 
                 row = f"{name_part:<{COL_WIDTHS['name']}} | {props_part:<{COL_WIDTHS['props']}} | {hex_part:<{COL_WIDTHS['value']}} | {parsed_part:<{COL_WIDTHS['parsed']}}"
-                lines.append(row[:max_cols]) # Ensure it doesn't exceed total max_cols
+                lines.append(row[:max_cols])  # Ensure it doesn't exceed total max_cols
 
-            lines.append('') # Add an empty line for separation between characteristics
+            lines.append('')  # Add an empty line for separation between characteristics
 
             if max_lines is not None and len(lines) >= max_lines:
                 return lines[:max_lines]
