@@ -271,18 +271,19 @@ class CoffeeMachine:
         # Setting the time to the specified time.
         if power_state == self.POWER_ON:
             time = datetime(2024, 1, 1, 9, 5, 0)
-            L.info(f"Setting machine time to Monday 9:01AM (within temp schedule).")
+            L.info(f"Setting machine time to Monday 9:05AM (within temp schedule).")
         else:
             time = datetime(2024, 1, 1, 10, 5, 0)
-            L.info(f"Setting machine time to Monday 10:01AM (outside temp schedule).")
+            L.info(f"Setting machine time to Monday 10:05AM (outside temp schedule).")
 
+        # Setting the last sync time to one minute before the current time.
         last_sync_time = time - timedelta(minutes=1)
         await self.set_last_sync_time(last_sync_time)
         await self.set_current_time(time)
         L.info("Machine time set.")
 
         await asyncio.sleep(1)  # Wait for the machine to process the change
-        # Disabling the timer state to prevent auto-scheduling.
+        # Disabling the timer state so it doesn't turn back off automatically.
         await self.enable_schedule(False)
         await asyncio.sleep(1)  # Wait for the machine to process the change
 
