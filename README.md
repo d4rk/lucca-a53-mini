@@ -1,4 +1,4 @@
-# Lucca A53 Mini BT LE Sniffer
+# Lucca A53 Mini BT LE Controller / Sniffer
 
 > *_STILL UNDER DEVELOPMENT_*
 
@@ -87,6 +87,10 @@ python3 controller.py [argument]
 **Arguments:**
 
 *   `--power-on`: Powers on the coffee machine. This will also disable the power schedule.
+    * Powering on and off is **hacky** because the S1 doesn't actually provide
+      any direct [commands](#protocol-details) to control it.
+    * So what the tool does is it creates a temporary schedule at a fixed time, and then set the machine's clock within or outside that schedule to trigger the desired power state.
+    * It _mostly_ works. Definitely open to other ideas.
 *   `--power-off`: Powers off the coffee machine. This will also disable the power schedule.
 *   `--enable-schedule`: Enables the power schedule previously set on the machine.
 *   `--disable-schedule`: Disables the power schedule previously set on the machine.
@@ -148,3 +152,5 @@ The S1 device communicates over Bluetooth Low Energy (BLE) using custom characte
         *   Byte 2: Status code? (ranges from 0-4 as temp goes up)
         *   Byte 3: Unknown/Reserved
 
+> [!NOTE]
+> The temperature readings are a bit interesting. Byte 2 in both cases return a "range", that goes from 0-3 or 0-4. When it's 0, the temperature readings are in single digit celsius, which seems wrong. When it's between 1-3/4, it seems accurate. So I'm not sure what the 0 state indicates, and what the corresponding temperature values in that state mean.
