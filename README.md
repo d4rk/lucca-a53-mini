@@ -10,6 +10,8 @@ developed for Clive Coffee.
 
 The official app is the S1 Timer, which is very bare-bones.
 
+> **Disclaimer**: This project is provided as-is, without any warranty. Use at your own risk. Incorrect usage may damage your machine. This project was developed through reverse-engineering and "vibe coding," and may not be entirely accurate or complete.
+
 ## Contents
 
 *   [Setup](#setup)
@@ -45,6 +47,8 @@ This project has two main programs:
 2.  `controller.py`: A command-line tool to control the coffee machine's settings.
 
 ### `scanner.py`
+
+![screenshot of scanner.py](images/screenshot1.png?raw=true)
 
 To run the scanner, execute `scanner.py`:
 
