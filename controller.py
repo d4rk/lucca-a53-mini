@@ -90,10 +90,6 @@ async def async_main(args):
         if args.print_schedule:
             schedule = await machine.get_schedule()
             print(json.dumps(schedule, indent=4))
-        elif not args.set_schedule:
-            current_time = await machine.get_current_time()
-            L.info(f"Current machine time: {current_time.strftime('%Y-%m-%d %H:%M:%S')}")
-
         if args.power_on:
             await machine.power_on()
         if args.power_off:

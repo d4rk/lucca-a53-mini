@@ -102,10 +102,11 @@ class CoffeeMachine:
                 state_str = parsed_data[0][1]
                 temp_str = parsed_data[1][1]
                 return {
+                    "name": name,
                     "state": state_str,
                     "temp": temp_str
                 }
-        return {"state": "Unknown", "temp": "Unknown"}
+        return {"name": name, "state": "Unknown", "temp": "Unknown"}
 
     async def enable_schedule(self, enabled: bool):
         """
