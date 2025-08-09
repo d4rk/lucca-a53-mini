@@ -1,5 +1,5 @@
 import asyncio
-from a53.bt.ble_worker import BLEWorker
+from bleak import BleakClient
 from a53.bt.ble_utils import discover_s1_devices
 from a53.parsers.characteristic_parsers import get_parser
 from datetime import datetime, timedelta
@@ -32,37 +32,39 @@ class CoffeeMachine:
             address: The BLE address of the coffee machine.
         """
         self._address = address
-        self._ble_worker = BLEWorker()
+        self._client = BleakClient(address, disconnected_callback=self._on_disconnect)
         self._is_connected = False
+
+    def _on_disconnect(self, client):
+        self._is_connected = False
+        L.warning(f"Disconnected from {client.address}. Will attempt to reconnect.")
+        asyncio.create_task(self.connect())
 
     async def connect(self):
         """
         Establishes a connection to the coffee machine.
         """
-        if not self._is_connected:
-            if not self._ble_worker:
-                self._ble_worker = BLEWorker()
-            self._ble_worker.start()
-            # Send a connect command to the worker and wait for confirmation
-            connect_result_queue = self._ble_worker.connect_device(self._address)
-            result = await asyncio.to_thread(connect_result_queue.get) # Blocking call in async context
-            if result.get("success"):
-                self._is_connected = True
+        if self._is_connected:
+            return
+
+        L.info(f"Attempting to connect to {self._address}...")
+        try:
+            await self._client.connect()
+            self._is_connected = self._client.is_connected
+            if self._is_connected:
                 L.info(f"Connected to {self._address}.")
             else:
-                L.error(f"Failed to connect: {result.get('error', 'Unknown error')}")
-                self._ble_worker.stop() # Stop worker if connection fails
-                raise ConnectionError(f"Failed to connect to {self._address}: {result.get('error', 'Unknown error')}")
+                L.warning(f"Failed to connect to {self._address}.")
+        except Exception as e:
+            L.error(f"Failed to connect to {self._address}: {e}")
+            self._is_connected = False
 
     async def disconnect(self):
         """
         Closes the connection to the coffee machine.
         """
         if self._is_connected:
-            disconnect_result_queue = self._ble_worker.disconnect_device()
-            await asyncio.to_thread(disconnect_result_queue.get) # Wait for disconnect confirmation
-            self._ble_worker.stop()
-            self._ble_worker = None
+            await self._client.disconnect()
             self._is_connected = False
             L.info(f"Disconnected from {self._address}.")
 
@@ -92,11 +94,7 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         L.info(f"Fetching {name} boiler data...")
-        result_queue = self._ble_worker.read_characteristic(uuid)
-        raw_data = await asyncio.to_thread(result_queue.get)
-
-        if isinstance(raw_data, dict) and "error" in raw_data:
-            raise Exception(f"Error fetching {name} boiler data: {raw_data['error']}")
+        raw_data = await self._client.read_gatt_char(uuid)
 
         parser = get_parser(uuid)
         if parser:
@@ -127,10 +125,7 @@ class CoffeeMachine:
 
         value = parser.encode_value(enabled)
         L.info(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
-        write_result_queue = self._ble_worker.write_characteristic(self.UUID_TIMER_STATE, value)
-        result = await asyncio.to_thread(write_result_queue.get)
-        if not result.get("success"):
-            raise Exception(f"Failed to set timer state: {result.get('error', 'Unknown error')}")
+        await self._client.write_gatt_char(self.UUID_TIMER_STATE, value)
         L.info("Timer state command sent.")
 
     async def get_timer_state(self) -> bool:
@@ -144,11 +139,7 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         L.info("Fetching timer state...")
-        result_queue = self._ble_worker.read_characteristic(self.UUID_TIMER_STATE)
-        raw_data = await asyncio.to_thread(result_queue.get)
-
-        if isinstance(raw_data, dict) and "error" in raw_data:
-            raise Exception(f"Error fetching timer state: {raw_data['error']}")
+        raw_data = await self._client.read_gatt_char(self.UUID_TIMER_STATE)
 
         parser = get_parser(self.UUID_TIMER_STATE)
         if parser:
@@ -171,11 +162,7 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         L.info("Fetching schedule...")
-        result_queue = self._ble_worker.read_characteristic(self.UUID_SCHEDULE)
-        raw_schedule_data = await asyncio.to_thread(result_queue.get)
-
-        if isinstance(raw_schedule_data, dict) and "error" in raw_schedule_data:
-            raise Exception(f"Error fetching schedule: {raw_schedule_data['error']}")
+        raw_schedule_data = await self._client.read_gatt_char(self.UUID_SCHEDULE)
 
         parser = get_parser(self.UUID_SCHEDULE)
         if parser:
@@ -201,10 +188,7 @@ class CoffeeMachine:
         encoded_schedule = parser.encode_value(schedule_data)
 
         L.info(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
-        write_result_queue = self._ble_worker.write_characteristic(self.UUID_SCHEDULE, encoded_schedule)
-        result = await asyncio.to_thread(write_result_queue.get)
-        if not result.get("success"):
-            raise Exception(f"Failed to set schedule: {result.get('error', 'Unknown error')}")
+        await self._client.write_gatt_char(self.UUID_SCHEDULE, encoded_schedule)
         L.info("Schedule command sent.")
 
     async def get_current_time(self) -> datetime:
@@ -218,11 +202,7 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         L.info("Fetching current time...")
-        result_queue = self._ble_worker.read_characteristic(self.UUID_CURRENT_TIME)
-        raw_time_data = await asyncio.to_thread(result_queue.get)
-
-        if isinstance(raw_time_data, dict) and "error" in raw_time_data:
-            raise Exception(f"Error fetching current time: {raw_time_data['error']}")
+        raw_time_data = await self._client.read_gatt_char(self.UUID_CURRENT_TIME)
 
         parser = get_parser(self.UUID_CURRENT_TIME)
         if parser:
@@ -275,13 +255,11 @@ class CoffeeMachine:
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
-        # Read the current schedule and save a copy of it to schedule.bak
         L.info("Reading current schedule...")
         original_schedule = await self.get_schedule()
         self._backup_schedule(original_schedule)
         await self.enable_schedule(True)
 
-        # Setting the schedule to: Monday: Slot 1: 9AM - 10AM, Boiler ON
         L.info("Setting new schedule...")
         new_schedule = {
             "Monday": [{
@@ -299,7 +277,6 @@ class CoffeeMachine:
         await self.set_schedule(new_schedule)
         L.info("New schedule set.")
 
-        # Setting the time to the specified time.
         if power_state == self.POWER_ON:
             time = datetime(2024, 1, 1, 9, 5, 0)
             L.info(f"Setting machine time to Monday 9:05AM (within temp schedule).")
@@ -307,18 +284,15 @@ class CoffeeMachine:
             time = datetime(2024, 1, 1, 10, 5, 0)
             L.info(f"Setting machine time to Monday 10:05AM (outside temp schedule).")
 
-        # Setting the last sync time to one minute before the current time.
         last_sync_time = time - timedelta(minutes=1)
         await self.set_last_sync_time(last_sync_time)
         await self.set_current_time(time)
         L.info("Machine time set.")
 
-        await asyncio.sleep(1)  # Wait for the machine to process the change
-        # Disabling the timer state so it doesn't turn back off automatically.
+        await asyncio.sleep(1)
         await self.enable_schedule(False)
-        await asyncio.sleep(1)  # Wait for the machine to process the change
+        await asyncio.sleep(1)
 
-        # Setting the time back to the current local time.
         L.info("Setting machine time back to current local time...")
         current_local_time = datetime.now()
         last_sync_time = current_local_time - timedelta(minutes=1)
@@ -326,7 +300,6 @@ class CoffeeMachine:
         await self.set_current_time(current_local_time)
         L.info("Machine time set back to current local time.")
 
-        # Restore the original schedule
         L.info("Restoring original schedule...")
         await self.set_schedule(original_schedule)
         L.info("Original schedule restored.")
@@ -350,10 +323,7 @@ class CoffeeMachine:
         value = parser.encode_value(dt)
 
         L.info(f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})...")
-        write_result_queue = self._ble_worker.write_characteristic(uuid, value)
-        result = await asyncio.to_thread(write_result_queue.get)
-        if not result.get("success"):
-            raise Exception(f"Failed to set {description}: {result.get('error', 'Unknown error')}")
+        await self._client.write_gatt_char(uuid, value)
         L.info(f"{description.capitalize()} command sent.")
 
     def _backup_schedule(self, schedule_data: dict):

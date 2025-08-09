@@ -1,2 +1,2 @@
 bleak
-Flask[async]
+Quart
