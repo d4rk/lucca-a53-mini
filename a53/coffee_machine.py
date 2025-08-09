@@ -40,6 +40,8 @@ class CoffeeMachine:
         Establishes a connection to the coffee machine.
         """
         if not self._is_connected:
+            if not self._ble_worker:
+                self._ble_worker = BLEWorker()
             self._ble_worker.start()
             # Send a connect command to the worker and wait for confirmation
             connect_result_queue = self._ble_worker.connect_device(self._address)
@@ -60,6 +62,7 @@ class CoffeeMachine:
             disconnect_result_queue = self._ble_worker.disconnect_device()
             await asyncio.to_thread(disconnect_result_queue.get) # Wait for disconnect confirmation
             self._ble_worker.stop()
+            self._ble_worker = None
             self._is_connected = False
             L.info(f"Disconnected from {self._address}.")
 
