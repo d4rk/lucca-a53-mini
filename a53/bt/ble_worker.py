@@ -8,13 +8,14 @@ class BLEWorker:
     def __init__(self):
         self.cmd_queue = queue.Queue()
         self.result_queue = queue.Queue()
-        self.thread = threading.Thread(target=self._run, daemon=True)
         self.loop = None
         self.running = False
         self._client = None
 
     def start(self):
+        self.stop()  # Ensure any previous instance is stopped
         self.running = True
+        self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
 
     def stop(self):
@@ -26,6 +27,7 @@ class BLEWorker:
         except queue.Full:
             pass
         self.thread.join()
+        self.thread = None
 
     def connect_device(self, address):
         q = queue.Queue()
