@@ -62,10 +62,7 @@ class BLEWorker:
                 try:
                     cmd, args = self.cmd_queue.get_nowait()
 
-                    if cmd == 'stop':
-                        break
-                    
-                    elif cmd == 'connect':
+                    if cmd == 'connect':
                         address, q = args
                         try:
                             self._client = BleakClient(address)
@@ -74,7 +71,7 @@ class BLEWorker:
                         except Exception as e:
                             q.put({"success": False, "error": str(e)})
 
-                    elif cmd == 'disconnect':
+                    elif cmd == 'disconnect' or cmd == 'stop':
                         q = args
                         try:
                             if self._client and self._client.is_connected:
@@ -116,13 +113,13 @@ class BLEWorker:
                         # list_characteristics now takes the client directly for polling
                         coro = list_characteristics(self._client, q, poll_interval)
                         task = self.loop.create_task(coro)
-                        
+
                         if poll_interval > 0:
                             polling_task = task
 
                 except queue.Empty:
                     pass
-                
+
                 await asyncio.sleep(0.1)
 
             if polling_task and not polling_task.done():
@@ -131,7 +128,7 @@ class BLEWorker:
                     await asyncio.gather(polling_task, return_exceptions=True)
                 except asyncio.CancelledError:
                     pass
-            
+
             # Ensure client is disconnected on worker stop
             if self._client and self._client.is_connected:
                 await self._client.disconnect()
