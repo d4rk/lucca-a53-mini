@@ -133,6 +133,33 @@ class CoffeeMachine:
             raise Exception(f"Failed to set timer state: {result.get('error', 'Unknown error')}")
         L.info("Timer state command sent.")
 
+    async def get_timer_state(self) -> bool:
+        """
+        Retrieves the current state of the schedule timer (enabled/disabled).
+
+        Returns:
+            True if enabled, False if disabled.
+        """
+        if not self._is_connected:
+            raise ConnectionError("Not connected to the coffee machine.")
+
+        L.info("Fetching timer state...")
+        result_queue = self._ble_worker.read_characteristic(self.UUID_TIMER_STATE)
+        raw_data = await asyncio.to_thread(result_queue.get)
+
+        if isinstance(raw_data, dict) and "error" in raw_data:
+            raise Exception(f"Error fetching timer state: {raw_data['error']}")
+
+        parser = get_parser(self.UUID_TIMER_STATE)
+        if parser:
+            parsed_data = parser.parse_value(raw_data)
+            # Assuming the parser for UUID_TIMER_STATE returns a boolean or a value that can be interpreted as boolean
+            # The enable_schedule method encodes a boolean, so parsing should return a boolean or similar.
+            if parsed_data and len(parsed_data) > 0:
+                # The parser returns a list of (description, value) tuples. We need the value.
+                return bool(parsed_data[0][1])
+        raise Exception("Failed to parse timer state.")
+
     async def get_schedule(self) -> dict:
         """
         Retrieves the current weekly schedule from the machine.

@@ -113,6 +113,28 @@ async def disable_schedule():
         L.error(f"Error disabling schedule: {e}")
         return jsonify({"status": "error", "message": f"Failed to disable schedule: {e}"}), 500
 
+@app.route('/api/schedule', methods=['GET'])
+async def get_full_schedule():
+    if not await ensure_connected():
+        return jsonify({"error": "Coffee machine not connected and failed to reconnect."}), 503
+    try:
+        schedule = await coffee_machine.get_schedule()
+        return jsonify({"status": "success", "schedule": schedule})
+    except Exception as e:
+        L.error(f"Error fetching schedule: {e}")
+        return jsonify({"status": "error", "message": f"Failed to fetch schedule: {e}"}), 500
+
+@app.route('/api/schedule/status', methods=['GET'])
+async def get_schedule_status():
+    if not await ensure_connected():
+        return jsonify({"error": "Coffee machine not connected and failed to reconnect."}), 503
+    try:
+        enabled = await coffee_machine.get_timer_state()
+        return jsonify({"status": "success", "enabled": enabled})
+    except Exception as e:
+        L.error(f"Error fetching schedule status: {e}")
+        return jsonify({"status": "error", "message": f"Failed to fetch schedule status: {e}"}), 500
+
 @app.route('/api/disconnect', methods=['POST'])
 async def disconnect_machine():
     global coffee_machine
