@@ -10,18 +10,20 @@ app = Quart(__name__)
 coffee_machine: CoffeeMachine = None
 MACHINE_ADDRESS: str = None # To store the discovered address
 
-@app.before_serving
 async def connect_to_machine():
     global coffee_machine, MACHINE_ADDRESS
     L.info("Attempting to connect to coffee machine...")
     try:
-        s1_devices = await CoffeeMachine.discover()
-        if not s1_devices:
-            L.error("No S1 devices found. Cannot connect to coffee machine.")
-            return
+        if MACHINE_ADDRESS:
+            L.info(f"Reusing previously selected address: {MACHINE_ADDRESS}")
+        else:
+            s1_devices = await CoffeeMachine.discover()
+            if not s1_devices:
+                L.error("No S1 devices found. Cannot connect to coffee machine.")
+                return
 
-        MACHINE_ADDRESS = s1_devices[0].address
-        L.info(f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})")
+            MACHINE_ADDRESS = s1_devices[0].address
+            L.info(f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})")
 
         coffee_machine = CoffeeMachine(MACHINE_ADDRESS)
         await coffee_machine.connect()

@@ -34,11 +34,13 @@ class CoffeeMachine:
         self._address = address
         self._client = BleakClient(address, disconnected_callback=self._on_disconnect)
         self._is_connected = False
+        self._auto_reconnect = True  # Automatically attempt to reconnect on disconnect
 
     def _on_disconnect(self, client):
         self._is_connected = False
-        L.warning(f"Disconnected from {client.address}. Will attempt to reconnect.")
-        asyncio.create_task(self.connect())
+        if self._auto_reconnect:
+            L.info(f"Disconnected from {client.address}. Attempting to reconnect...")
+            asyncio.create_task(self.connect())
 
     async def connect(self):
         """
@@ -64,6 +66,7 @@ class CoffeeMachine:
         Closes the connection to the coffee machine.
         """
         if self._is_connected:
+            self._auto_reconnect = False  # Disable auto-reconnect
             await self._client.disconnect()
             self._is_connected = False
             L.info(f"Disconnected from {self._address}.")
