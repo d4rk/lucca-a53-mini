@@ -8,27 +8,30 @@ app = Quart(__name__)
 
 # Global variable to hold the coffee machine instance
 coffee_machine: CoffeeMachine = None
+connection_lock = asyncio.Lock()
 MACHINE_ADDRESS: str = None # To store the discovered address
 
 async def connect_to_machine():
-    global coffee_machine, MACHINE_ADDRESS
+    global coffee_machine, MACHINE_ADDRESS, connection_lock
     L.info("Attempting to connect to coffee machine...")
-    try:
-        if MACHINE_ADDRESS:
-            L.info(f"Reusing previously selected address: {MACHINE_ADDRESS}")
-        else:
-            s1_devices = await CoffeeMachine.discover()
-            if not s1_devices:
-                L.error("No S1 devices found. Cannot connect to coffee machine.")
-                return
+    async with connection_lock:
+        try:
+            if MACHINE_ADDRESS:
+                L.info(f"Reusing previously selected address: {MACHINE_ADDRESS}")
+            else:
+                s1_devices = await CoffeeMachine.discover()
+                if not s1_devices:
+                    L.error("No S1 devices found. Cannot connect to coffee machine.")
+                    return
 
-            MACHINE_ADDRESS = s1_devices[0].address
-            L.info(f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})")
+                MACHINE_ADDRESS = s1_devices[0].address
+                L.info(f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})")
 
-        coffee_machine = CoffeeMachine(MACHINE_ADDRESS)
-        await coffee_machine.connect()
-    except Exception as e:
-        L.error(f"Failed to connect to coffee machine: {e}")
+            if not coffee_machine or not coffee_machine._is_connected:
+                coffee_machine = CoffeeMachine(MACHINE_ADDRESS)
+                await coffee_machine.connect()
+        except Exception as e:
+            L.error(f"Failed to connect to coffee machine: {e}")
 
 async def ensure_connected():
     if coffee_machine and coffee_machine._is_connected:

@@ -34,6 +34,7 @@ class CoffeeMachine:
         self._address = address
         self._client = BleakClient(address, disconnected_callback=self._on_disconnect)
         self._is_connected = False
+        self._connection_lock = asyncio.Lock()
         self._auto_reconnect = True  # Automatically attempt to reconnect on disconnect
 
     def _on_disconnect(self, client):
@@ -46,30 +47,32 @@ class CoffeeMachine:
         """
         Establishes a connection to the coffee machine.
         """
-        if self._is_connected:
-            return
-
-        L.info(f"Attempting to connect to {self._address}...")
-        try:
-            await self._client.connect()
-            self._is_connected = self._client.is_connected
+        async with self._connection_lock:
             if self._is_connected:
-                L.info(f"Connected to {self._address}.")
-            else:
-                L.warning(f"Failed to connect to {self._address}.")
-        except Exception as e:
-            L.error(f"Failed to connect to {self._address}: {e}")
-            self._is_connected = False
+                return
+
+            L.info(f"Attempting to connect to {self._address}...")
+            try:
+                await self._client.connect()
+                self._is_connected = self._client.is_connected
+                if self._is_connected:
+                    L.info(f"Connected to {self._address}.")
+                else:
+                    L.warning(f"Failed to connect to {self._address}.")
+            except Exception as e:
+                L.error(f"Failed to connect to {self._address}: {e}")
+                self._is_connected = False
 
     async def disconnect(self):
         """
         Closes the connection to the coffee machine.
         """
-        if self._is_connected:
-            self._auto_reconnect = False  # Disable auto-reconnect
-            await self._client.disconnect()
-            self._is_connected = False
-            L.info(f"Disconnected from {self._address}.")
+        async with self._connection_lock:
+            if self._is_connected:
+                self._auto_reconnect = False  # Disable auto-reconnect
+                await self._client.disconnect()
+                self._is_connected = False
+                L.info(f"Disconnected from {self._address}.")
 
     async def get_brew_boiler_temp(self) -> dict:
         """
@@ -119,6 +122,16 @@ class CoffeeMachine:
         Args:
             enabled: True to enable, False to disable.
         """
+        async with self._connection_lock:
+            await self._enable_schedule_unlocked(enabled)
+
+    async def _enable_schedule_unlocked(self, enabled: bool):
+        """
+        Enables or disables the schedule timer.
+
+        Args:
+            enabled: True to enable, False to disable.
+        """
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
@@ -138,23 +151,34 @@ class CoffeeMachine:
         Returns:
             True if enabled, False if disabled.
         """
-        if not self._is_connected:
-            raise ConnectionError("Not connected to the coffee machine.")
+        async with self._connection_lock:
+            if not self._is_connected:
+                raise ConnectionError("Not connected to the coffee machine.")
 
-        L.info("Fetching timer state...")
-        raw_data = await self._client.read_gatt_char(self.UUID_TIMER_STATE)
+            L.info("Fetching timer state...")
+            raw_data = await self._client.read_gatt_char(self.UUID_TIMER_STATE)
 
-        parser = get_parser(self.UUID_TIMER_STATE)
-        if parser:
-            parsed_data = parser.parse_value(raw_data)
-            # Assuming the parser for UUID_TIMER_STATE returns a boolean or a value that can be interpreted as boolean
-            # The enable_schedule method encodes a boolean, so parsing should return a boolean or similar.
-            if parsed_data and len(parsed_data) > 0:
-                # The parser returns a list of (description, value) tuples. We need the value.
-                return bool(parsed_data[0][1])
-        raise Exception("Failed to parse timer state.")
+            parser = get_parser(self.UUID_TIMER_STATE)
+            if parser:
+                parsed_data = parser.parse_value(raw_data)
+                # Assuming the parser for UUID_TIMER_STATE returns a boolean or a value that can be interpreted as boolean
+                # The enable_schedule method encodes a boolean, so parsing should return a boolean or similar.
+                if parsed_data and len(parsed_data) > 0:
+                    # The parser returns a list of (description, value) tuples. We need the value.
+                    return bool(parsed_data[0][1])
+            raise Exception("Failed to parse timer state.")
 
     async def get_schedule(self) -> dict:
+        """
+        Retrieves the current weekly schedule from the machine.
+
+        Returns:
+            A dictionary representing the weekly schedule.
+        """
+        async with self._connection_lock:
+            return await self._get_schedule_unlocked()
+
+    async def _get_schedule_unlocked(self) -> dict:
         """
         Retrieves the current weekly schedule from the machine.
 
@@ -181,6 +205,17 @@ class CoffeeMachine:
             schedule_data: A dictionary representing the weekly schedule.
                            Example: { "Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}], ... }
         """
+        async with self._connection_lock:
+            await self._set_schedule_unlocked(schedule_data)
+
+    async def _set_schedule_unlocked(self, schedule_data: dict):
+        """
+        Sets the weekly schedule on the machine.
+
+        Args:
+            schedule_data: A dictionary representing the weekly schedule.
+                           Example: { "Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}], ... }
+        """
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
 
@@ -195,6 +230,16 @@ class CoffeeMachine:
         L.info("Schedule command sent.")
 
     async def get_current_time(self) -> datetime:
+        """
+        Retrieves the current time from the machine.
+
+        Returns:
+            A datetime object representing the current time.
+        """
+        async with self._connection_lock:
+            return await self._get_current_time_unlocked()
+
+    async def _get_current_time_unlocked(self) -> datetime:
         """
         Retrieves the current time from the machine.
 
@@ -224,9 +269,29 @@ class CoffeeMachine:
         Args:
             dt: A datetime object representing the time to set.
         """
+        async with self._connection_lock:
+            await self._set_current_time_unlocked(dt)
+
+    async def _set_current_time_unlocked(self, dt: datetime):
+        """
+        Sets the current time on the machine.
+
+        Args:
+            dt: A datetime object representing the time to set.
+        """
         await self._set_time_characteristic(dt, self.UUID_CURRENT_TIME, "current time")
 
     async def set_last_sync_time(self, dt: datetime):
+        """
+        Sets the last sync time on the machine.
+
+        Args:
+            dt: A datetime object representing the time to set.
+        """
+        async with self._connection_lock:
+            await self._set_last_sync_time_unlocked(dt)
+
+    async def _set_last_sync_time_unlocked(self, dt: datetime):
         """
         Sets the last sync time on the machine.
 
@@ -240,7 +305,8 @@ class CoffeeMachine:
         Powers on the machine by setting a specific schedule and manipulating time.
         """
         L.info("Powering on the machine...")
-        await self._set_power_state(self.POWER_ON)
+        async with self._connection_lock:
+            await self._set_power_state(self.POWER_ON)
         L.info("Machine powered on successfully.")
 
     async def power_off(self):
@@ -248,7 +314,8 @@ class CoffeeMachine:
         Powers off the machine by setting a specific schedule and manipulating time.
         """
         L.info("Powering off the machine...")
-        await self._set_power_state(self.POWER_OFF)
+        async with self._connection_lock:
+            await self._set_power_state(self.POWER_OFF)
         L.info("Machine powered off successfully.")
 
     async def _set_power_state(self, power_state: bool):
@@ -259,9 +326,9 @@ class CoffeeMachine:
             raise ConnectionError("Not connected to the coffee machine.")
 
         L.info("Reading current schedule...")
-        original_schedule = await self.get_schedule()
+        original_schedule = await self._get_schedule_unlocked()
         self._backup_schedule(original_schedule)
-        await self.enable_schedule(True)
+        await self._enable_schedule_unlocked(True)
 
         L.info("Setting new schedule...")
         new_schedule = {
@@ -277,7 +344,7 @@ class CoffeeMachine:
             "Saturday": [],
             "Sunday": []
         }
-        await self.set_schedule(new_schedule)
+        await self._set_schedule_unlocked(new_schedule)
         L.info("New schedule set.")
 
         if power_state == self.POWER_ON:
@@ -288,23 +355,23 @@ class CoffeeMachine:
             L.info(f"Setting machine time to Monday 10:05AM (outside temp schedule).")
 
         last_sync_time = time - timedelta(minutes=1)
-        await self.set_last_sync_time(last_sync_time)
-        await self.set_current_time(time)
+        await self._set_last_sync_time_unlocked(last_sync_time)
+        await self._set_current_time_unlocked(time)
         L.info("Machine time set.")
 
         await asyncio.sleep(1)
-        await self.enable_schedule(False)
+        await self._enable_schedule_unlocked(False)
         await asyncio.sleep(1)
 
         L.info("Setting machine time back to current local time...")
         current_local_time = datetime.now()
         last_sync_time = current_local_time - timedelta(minutes=1)
-        await self.set_last_sync_time(current_local_time)
-        await self.set_current_time(current_local_time)
+        await self._set_last_sync_time_unlocked(current_local_time)
+        await self._set_current_time_unlocked(current_local_time)
         L.info("Machine time set back to current local time.")
 
         L.info("Restoring original schedule...")
-        await self.set_schedule(original_schedule)
+        await self._set_schedule_unlocked(original_schedule)
         L.info("Original schedule restored.")
 
     async def _set_time_characteristic(self, dt: datetime, uuid: str, description: str):
