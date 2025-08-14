@@ -96,19 +96,11 @@ class BoilerParser(CharacteristicParser):
         # Temperature is always present
         temp_raw = int.from_bytes(value[0:2], 'little')
         temperature = temp_raw / 10.0
-        results.append((f"{self.name} Boiler Temp", f"{temperature} C"))
+        results.append((f"{self.name} Boiler Temp", f"{temperature}"))
 
         # Boiler Status as percentage
         status_code_byte = value[1]
-        percentage = 0.0
-        if self.name == "Brew":
-            max_val = 3.0
-            percentage = (status_code_byte / max_val) * 100 if max_val > 0 else 0
-        elif self.name == "Steam":
-            max_val = 4.0
-            percentage = (status_code_byte / max_val) * 100 if max_val > 0 else 0
-
-        results.insert(0, (f"{self.name} Boiler Status", f"{percentage:.0f}%"))
+        results.insert(0, (f"{self.name} Boiler Status", f"{status_code_byte}%"))
 
         return results
 
