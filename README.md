@@ -15,6 +15,7 @@ The official app is the S1 Timer, which is very bare-bones.
 ## Contents
 
 *   [Setup](#setup)
+*   [Documentation](#documentation)
 *   [Usage](#usage)
 *   [Protocol Details](#protocol-details)
 
@@ -31,80 +32,41 @@ The official app is the S1 Timer, which is very bare-bones.
 
 2.  **Install dependencies:**
 
-    It is recommended to use a virtual environment.
+    You can install the dependencies using a virtual environment or directly.
+
+    **Using a virtual environment (recommended):**
 
     ```bash
     python3 -m venv venv
-    source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
+    source venv/bin/activate
     pip install -r requirements.txt
     ```
 
+    **Direct installation:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## Documentation
+
+This project has three main programs:
+
+1.  [`scanner.py`](docs/scanner.md): A command-line tool to scan for and display information from the coffee machine.
+2.  [`controller.py`](docs/controller.md): A command-line tool to control the coffee machine's settings.
+3.  [`server.py`](docs/server.md): A web server that exposes a RESTful API to control the coffee machine.
+
+Detailed documentation for each program is available in the `docs/` directory.
+
 ## Usage
 
-This project has two main programs:
+For detailed usage instructions, please refer to the documentation for each program:
 
-1.  `scanner.py`: A command-line tool to scan for and display information from the coffee machine.
-2.  `controller.py`: A command-line tool to control the coffee machine's settings.
+*   [**`scanner.py`**](docs/scanner.md)
+*   [**`controller.py`**](docs/controller.md)
+*   [**`server.py`**](docs/server.md)
 
-### `scanner.py`
-
-![screenshot of scanner.py](images/screenshot1.png?raw=true)
-
-To run the scanner, execute `scanner.py`:
-
-```bash
-python3 scanner.py
-```
-
-**Arguments:**
-
-*   `--poll <interval>`: Enables continuous polling of BLE characteristics at the specified interval in seconds. If omitted, the characteristics will be read only once.
-
-    Example (one-time read):
-    ```bash
-    python3 scanner.py
-    ```
-
-    Example (poll every second):
-    ```bash
-    python3 scanner.py --poll 1
-    ```
-
-**Device Selection:**
-
-Upon running `scanner.py`, the program will attempt to discover S1 devices. If multiple devices are found, you will be prompted to select a device by its index or to manually enter a BLE address.
-
-If only one S1 device is found, it will automatically connect to it.
-
-**Interactive Polling Display:**
-
-When using the `--poll` argument, an interactive curses-based display will be used to show the polled data in real-time. Press `q` to quit the polling display.
-
-### `controller.py`
-
-To run the controller, execute `controller.py` with one of the available arguments:
-
-```bash
-python3 controller.py [argument]
-```
-
-**Arguments:**
-
-*   `--power-on`: Powers on the coffee machine. This will also disable the power schedule.
-    * Powering on and off is **hacky** because the S1 doesn't actually provide
-      any direct [commands](#protocol-details) to control it.
-    * So what the tool does is it creates a temporary schedule at a fixed time, and then set the machine's clock within or outside that schedule to trigger the desired power state.
-    * It _mostly_ works. Definitely open to other ideas.
-*   `--power-off`: Powers off the coffee machine. This will also disable the power schedule.
-*   `--enable-schedule`: Enables the power schedule previously set on the machine.
-*   `--disable-schedule`: Disables the power schedule previously set on the machine.
-*   `--print-schedule`: Prints the schedule in formatted JSON.
-*   `--set-schedule`: Reads JSON from standard input and sets the schedule.
-*   `--brew-boiler-temp`: Prints the brew boiler temperature and state.
-*   `--steam-boiler-temp`: Prints the steam boiler temperature and state.
-*   `--address <address>`: Optional BLE address of the S1 device. If not provided, it will auto discover the device.
-
-## Protocol Details
+## Bluetooth Protocol Details
 
 The S1 device communicates over Bluetooth Low Energy (BLE) using custom characteristics. Below are the UUIDs and their known data formats:
 
