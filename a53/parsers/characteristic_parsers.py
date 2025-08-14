@@ -100,7 +100,7 @@ class BoilerParser(CharacteristicParser):
 
         # Boiler Status as percentage
         status_code_byte = value[1]
-        results.insert(0, (f"{self.name} Boiler Status", f"{status_code_byte}%"))
+        results.insert(0, (f"{self.name} Boiler Status", f"{status_code_byte}"))
 
         return results
 
