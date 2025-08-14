@@ -1,9 +1,9 @@
-# Lucca A53 Mini BT LE Controller / Sniffer
+# La Spaziale Vivaldi / LUCCA A53 Automation Tools
 
 > *_STILL UNDER DEVELOPMENT_*
 
 This project allows you to interact with S1 v.02.07 BLE devices,
-which is the timer installed in [Lucca A53 Mini](https://clivecoffee.com/products/lucca-a53-mini-espresso-machine-by-la-spaziale?variant=39948235440216) Espresso machines.
+which is the timer installed in [LUCCA A53 Mini](https://clivecoffee.com/products/lucca-a53-mini-espresso-machine-by-la-spaziale?variant=39948235440216) Espresso machines.
 
 The A53 is a custom built variant of the [La Spaziale Mini Vivaldi II](https://clivecoffee.com/products/la-spaziale-mini-vivaldi-ii-espresso-machine),
 developed for Clive Coffee.
