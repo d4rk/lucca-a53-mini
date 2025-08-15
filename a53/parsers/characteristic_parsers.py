@@ -62,7 +62,7 @@ class TimerStateParser(CharacteristicParser):
     def parse_value(self, value):
         if not value:
             return None
-        state = "Enabled" if value[0] == 0x01 else "Disabled"
+        state = value[0] == 0x01
         return [("Schedule Enabled", state)]
 
     def encode_value(self, enabled):

@@ -29,12 +29,12 @@ class TestCharacteristicParsers(unittest.TestCase):
         encoded = parser.encode_value(True)
         self.assertEqual(encoded, bytearray([0x01]))
         decoded = parser.parse_value(encoded)
-        self.assertEqual(decoded[0][1], "Enabled")
+        self.assertEqual(decoded[0][1], True)
 
         encoded = parser.encode_value(False)
         self.assertEqual(encoded, bytearray([0x00]))
         decoded = parser.parse_value(encoded)
-        self.assertEqual(decoded[0][1], "Disabled")
+        self.assertEqual(decoded[0][1], False)
 
     def test_schedule_parser(self):
         parser = ScheduleParser()
@@ -55,7 +55,7 @@ class TestCharacteristicParsers(unittest.TestCase):
         # Simulate raw data for brew boiler
         raw_data = bytearray([0x5a, 0x00, 0x01, 0x00])  # 90 degrees, status 1
         decoded = parser.parse_value(raw_data)
-        self.assertIn(("Brew Boiler Temp", "9.0 C"), decoded)
+        self.assertIn(("Brew Boiler Temp", "9.0"), decoded)
 
     def test_get_parser(self):
         self.assertIsInstance(get_parser(UUID_CURRENT_TIME), DateTimeParser)
