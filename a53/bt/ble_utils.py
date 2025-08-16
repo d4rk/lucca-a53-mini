@@ -3,6 +3,7 @@ from a53.common.logging import get_logger
 
 L = get_logger(__name__)
 
+
 async def discover_s1_devices():
     L.info("Scanning for 'S1 v.02.07'")
     devices = await BleakScanner.discover()

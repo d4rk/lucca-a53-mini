@@ -45,10 +45,11 @@ def curses_polling(result_queue):
                 stdscr.refresh()
             try:
                 c = stdscr.getch()
-                if c == ord('q'):
+                if c == ord("q"):
                     break
             except Exception:
                 pass
+
     curses.wrapper(poll_loop)
 
 
@@ -66,30 +67,30 @@ def _wrap_text(text, width):
 
 def _prepare_characteristic_data(char):
     """Extracts and pre-processes data for a single characteristic."""
-    char_uuid = char.get('uuid', '')
+    char_uuid = char.get("uuid", "")
     char_name = f"{char_uuid} ({char.get('description', '')})"
-    
-    # Condense properties
-    props_list = char.get('properties', [])
-    condensed_props = []
-    if 'read' in props_list and 'write' in props_list:
-        condensed_props.append('rw')
-    elif 'read' in props_list:
-        condensed_props.append('ro')
-    elif 'write' in props_list:
-        condensed_props.append('wo')
-    props = ','.join(condensed_props)
 
-    value_chunks = char.get('value_chunks', [])
-    if char.get('error'):
+    # Condense properties
+    props_list = char.get("properties", [])
+    condensed_props = []
+    if "read" in props_list and "write" in props_list:
+        condensed_props.append("rw")
+    elif "read" in props_list:
+        condensed_props.append("ro")
+    elif "write" in props_list:
+        condensed_props.append("wo")
+    props = ",".join(condensed_props)
+
+    value_chunks = char.get("value_chunks", [])
+    if char.get("error"):
         value_str = f"Error: {char['error']}"
     elif value_chunks:
-        value_str = ' '.join(value_chunks)
+        value_str = " ".join(value_chunks)
     else:
-        value_str = '<not readable>'
-    
+        value_str = "<not readable>"
+
     parsed_list = []
-    raw_value = char.get('value')
+    raw_value = char.get("value")
     if raw_value:
         parser = get_parser(char_uuid)
         if parser:
@@ -100,21 +101,23 @@ def _prepare_characteristic_data(char):
                     if isinstance(parsed_value, dict):
                         for day, slots in parsed_value.items():
                             for slot in slots:
-                                parsed_list.append((
-                                    f"{day} {slot['start']}-{slot['end']}",
-                                    f"Boiler: {'ON' if slot['boiler_on'] else 'OFF'}"
-                                ))
+                                parsed_list.append(
+                                    (
+                                        f"{day} {slot['start']}-{slot['end']}",
+                                        f"Boiler: {'ON' if slot['boiler_on'] else 'OFF'}",
+                                    )
+                                )
                     else:
                         parsed_list = parsed_value
             except Exception:
                 parsed_list.append(("** Parsing failed **", ""))
 
     return {
-        'name': char_name,
-        'props': props,
-        'value': value_str,
-        'parsed': parsed_list,
-        'value_chunks': value_chunks
+        "name": char_name,
+        "props": props,
+        "value": value_str,
+        "parsed": parsed_list,
+        "value_chunks": value_chunks,
     }
 
 
@@ -122,25 +125,27 @@ def _format_console_output(data):
     """Formats data for detailed console output."""
     lines = []
     for service in data:
-        header = f"Service: {service.get('uuid', '')} ({service.get('description', '')})"
+        header = (
+            f"Service: {service.get('uuid', '')} ({service.get('description', '')})"
+        )
         lines.append(header)
 
-        for char in service.get('characteristics', []):
+        for char in service.get("characteristics", []):
             char_data = _prepare_characteristic_data(char)
             lines.append(f"  Characteristic: {char_data['name']}")
             lines.append(f"    Properties: {char_data['props']}")
             lines.append(f"    Value (hex):")
-            if char_data['value_chunks']:
-                for i in range(0, len(char_data['value_chunks']), 8):
-                    line = ' '.join(char_data['value_chunks'][i:i+8])
+            if char_data["value_chunks"]:
+                for i in range(0, len(char_data["value_chunks"]), 8):
+                    line = " ".join(char_data["value_chunks"][i : i + 8])
                     lines.append(f"      {line}")
             else:
                 lines.append(f"      {char_data['value']}")
-            if char_data['parsed']:
+            if char_data["parsed"]:
                 lines.append(f"    Parsed Values:")
-                for desc, val in char_data['parsed']:
+                for desc, val in char_data["parsed"]:
                     lines.append(f"      {desc}: {val}")
-            lines.append('')
+            lines.append("")
     return lines
 
 
@@ -157,43 +162,49 @@ def _format_curses_output(data, max_lines, max_cols):
     parsed_width = max(0, max_cols - fixed_width)
 
     COL_WIDTHS = {
-        'name': name_width,
-        'props': props_width,
-        'value': value_width,
-        'parsed': parsed_width
+        "name": name_width,
+        "props": props_width,
+        "value": value_width,
+        "parsed": parsed_width,
     }
     char_header = f"{'Characteristic':<{COL_WIDTHS['name']}} | {'Properties':<{COL_WIDTHS['props']}} | {'Value (hex)':<{COL_WIDTHS['value']}} | {'Parsed':<{COL_WIDTHS['parsed']}}"
     lines.append(char_header[:max_cols])
-    lines.append('-' * min(len(char_header), max_cols))
+    lines.append("-" * min(len(char_header), max_cols))
 
     for service in data:
-        header = f"Service: {service.get('uuid', '')} ({service.get('description', '')})"
+        header = (
+            f"Service: {service.get('uuid', '')} ({service.get('description', '')})"
+        )
         lines.append(header[:max_cols])
 
-        for char in service.get('characteristics', []):
+        for char in service.get("characteristics", []):
             char_data = _prepare_characteristic_data(char)
 
             # Prepare content for each column, wrapped to column width
-            name_wrapped = _wrap_text(char_data['name'], COL_WIDTHS['name'])
-            props_wrapped = _wrap_text(char_data['props'], COL_WIDTHS['props'])
+            name_wrapped = _wrap_text(char_data["name"], COL_WIDTHS["name"])
+            props_wrapped = _wrap_text(char_data["props"], COL_WIDTHS["props"])
 
             hex_lines = []
-            if char_data['value_chunks']:
-                for i in range(0, len(char_data['value_chunks']), 8):
-                    line = ' '.join(char_data['value_chunks'][i:i+8])
-                    hex_lines.extend(_wrap_text(line, COL_WIDTHS['value']))
+            if char_data["value_chunks"]:
+                for i in range(0, len(char_data["value_chunks"]), 8):
+                    line = " ".join(char_data["value_chunks"][i : i + 8])
+                    hex_lines.extend(_wrap_text(line, COL_WIDTHS["value"]))
             else:
-                hex_lines.extend(_wrap_text(char_data['value'], COL_WIDTHS['value']))
+                hex_lines.extend(_wrap_text(char_data["value"], COL_WIDTHS["value"]))
 
             parsed_lines = []
-            if char_data['parsed']:
-                for desc, val in char_data['parsed']:
-                    parsed_lines.extend(_wrap_text(f"{desc}: {val}", COL_WIDTHS['parsed']))
+            if char_data["parsed"]:
+                for desc, val in char_data["parsed"]:
+                    parsed_lines.extend(
+                        _wrap_text(f"{desc}: {val}", COL_WIDTHS["parsed"])
+                    )
             else:
                 parsed_lines.append("")
 
             # Determine max height for this logical row
-            max_row_height = max(len(name_wrapped), len(props_wrapped), len(hex_lines), len(parsed_lines))
+            max_row_height = max(
+                len(name_wrapped), len(props_wrapped), len(hex_lines), len(parsed_lines)
+            )
 
             # Construct the physical rows
             for i in range(max_row_height):
@@ -205,9 +216,9 @@ def _format_curses_output(data, max_lines, max_cols):
                 row = f"{name_part:<{COL_WIDTHS['name']}} | {props_part:<{COL_WIDTHS['props']}} | {hex_part:<{COL_WIDTHS['value']}} | {parsed_part:<{COL_WIDTHS['parsed']}}"
                 lines.append(row[:max_cols])  # Ensure it doesn't exceed total max_cols
 
-            lines.append('')  # Add an empty line for separation between characteristics
+            lines.append("")  # Add an empty line for separation between characteristics
 
             if max_lines is not None and len(lines) >= max_lines:
                 return lines[:max_lines]
-            
+
     return lines

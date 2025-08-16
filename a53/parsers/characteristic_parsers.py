@@ -7,8 +7,10 @@ from a53.parsers.constants import (
     UUID_STEAM_BOILER,
 )
 
+
 class CharacteristicParser:
     """Base class for characteristic parsers."""
+
     def parse_value(self, value):
         """Parses the raw value of a characteristic.
 
@@ -28,6 +30,7 @@ class CharacteristicParser:
 
 class DateTimeParser(CharacteristicParser):
     """Parses the datetime characteristic."""
+
     def __init__(self, description):
         self.description = description
 
@@ -40,25 +43,30 @@ class DateTimeParser(CharacteristicParser):
             hour = value[4]
             minute = value[5]
             second = value[6]
-            dt_str = f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            dt_str = (
+                f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}"
+            )
             return [(self.description, dt_str)]
         return None
 
     def encode_value(self, dt):
         """Encodes a datetime object into a bytearray."""
-        return bytearray([
-            dt.year - 2000,
-            dt.month,
-            dt.day,
-            0,  # Unknown byte
-            dt.hour,
-            dt.minute,
-            dt.second
-        ])
+        return bytearray(
+            [
+                dt.year - 2000,
+                dt.month,
+                dt.day,
+                0,  # Unknown byte
+                dt.hour,
+                dt.minute,
+                dt.second,
+            ]
+        )
 
 
 class TimerStateParser(CharacteristicParser):
     """Parses the timer state characteristic."""
+
     def parse_value(self, value):
         if not value:
             return None
@@ -72,8 +80,10 @@ class TimerStateParser(CharacteristicParser):
 
 from a53.parsers.schedule_coder import ScheduleCoder
 
+
 class ScheduleParser(CharacteristicParser):
     """Parses the weekly schedule characteristic based on a 4-byte slot structure."""
+
     def parse_value(self, value):
         return ScheduleCoder.decode_schedule(value)
 
@@ -84,6 +94,7 @@ class ScheduleParser(CharacteristicParser):
 
 class BoilerParser(CharacteristicParser):
     """Parses a boiler's temperature and state characteristic."""
+
     def __init__(self, name):
         self.name = name
 
@@ -94,7 +105,7 @@ class BoilerParser(CharacteristicParser):
         results = []
 
         # Temperature is always present
-        temp_raw = int.from_bytes(value[0:2], 'little')
+        temp_raw = int.from_bytes(value[0:2], "little")
         temperature = temp_raw / 10.0
         results.append((f"{self.name} Boiler Temp", f"{temperature}"))
 
@@ -108,6 +119,7 @@ class BoilerParser(CharacteristicParser):
         """Boiler characteristics are read-only."""
         raise NotImplementedError("Boiler characteristics are read-only.")
 
+
 # Parser registry
 PARSERS = {
     UUID_CURRENT_TIME: DateTimeParser("Current Time"),
@@ -117,6 +129,7 @@ PARSERS = {
     UUID_BREW_BOILER: BoilerParser("Brew"),
     UUID_STEAM_BOILER: BoilerParser("Steam"),
 }
+
 
 def get_parser(uuid):
     """Returns a parser instance for the given UUID, if one exists."""

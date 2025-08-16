@@ -38,13 +38,7 @@ class TestCharacteristicParsers(unittest.TestCase):
 
     def test_schedule_parser(self):
         parser = ScheduleParser()
-        schedule = {
-            "Monday": [{
-                "start": "06:00",
-                "end": "09:00",
-                "boiler_on": True
-            }]
-        }
+        schedule = {"Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}]}
         encoded = parser.encode_value(schedule)
         self.assertEqual(len(encoded), 84)
         decoded = parser.parse_value(encoded)
@@ -53,7 +47,7 @@ class TestCharacteristicParsers(unittest.TestCase):
     def test_boiler_parser(self):
         parser = BoilerParser("Brew")
         # Simulate raw data for brew boiler
-        raw_data = bytearray([0x5a, 0x00, 0x01, 0x00])  # 90 degrees, status 1
+        raw_data = bytearray([0x5A, 0x00, 0x01, 0x00])  # 90 degrees, status 1
         decoded = parser.parse_value(raw_data)
         self.assertIn(("Brew Boiler Temp", "9.0"), decoded)
 

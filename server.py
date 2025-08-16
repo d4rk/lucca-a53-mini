@@ -9,7 +9,8 @@ app = Quart(__name__)
 # Global variable to hold the coffee machine instance
 coffee_machine: CoffeeMachine = None
 connection_lock = asyncio.Lock()
-MACHINE_ADDRESS: str = None # To store the discovered address
+MACHINE_ADDRESS: str = None  # To store the discovered address
+
 
 async def connect_to_machine():
     global coffee_machine, MACHINE_ADDRESS, connection_lock
@@ -25,13 +26,16 @@ async def connect_to_machine():
                     return
 
                 MACHINE_ADDRESS = s1_devices[0].address
-                L.info(f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})")
+                L.info(
+                    f"Automatically selecting {s1_devices[0].name} ({MACHINE_ADDRESS})"
+                )
 
             if not coffee_machine or not coffee_machine._is_connected:
                 coffee_machine = CoffeeMachine(MACHINE_ADDRESS)
                 await coffee_machine.connect()
         except Exception as e:
             L.error(f"Failed to connect to coffee machine: {e}")
+
 
 async def ensure_connected():
     if coffee_machine and coffee_machine._is_connected:
@@ -43,7 +47,8 @@ async def ensure_connected():
         return True
     return False
 
-@app.route('/api/temperature', methods=['GET'])
+
+@app.route("/api/temperature", methods=["GET"])
 async def get_temperatures():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -51,15 +56,13 @@ async def get_temperatures():
     try:
         brew_temp = await coffee_machine.get_brew_boiler_temp()
         steam_temp = await coffee_machine.get_steam_boiler_temp()
-        return jsonify({
-            "brew_boiler": brew_temp,
-            "steam_boiler": steam_temp
-        })
+        return jsonify({"brew_boiler": brew_temp, "steam_boiler": steam_temp})
     except Exception as e:
         L.error(f"Error fetching temperatures: {e}")
         return jsonify({"error": f"Error fetching temperatures: {e}"}), 500
 
-@app.route('/api/power/on', methods=['POST'])
+
+@app.route("/api/power/on", methods=["POST"])
 async def power_on_machine():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -68,9 +71,13 @@ async def power_on_machine():
         return jsonify({"status": "success", "message": "Coffee machine powered on."})
     except Exception as e:
         L.error(f"Error powering on machine: {e}")
-        return jsonify({"status": "error", "message": f"Failed to power on machine: {e}"}), 500
+        return (
+            jsonify({"status": "error", "message": f"Failed to power on machine: {e}"}),
+            500,
+        )
 
-@app.route('/api/power/off', methods=['POST'])
+
+@app.route("/api/power/off", methods=["POST"])
 async def power_off_machine():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -79,9 +86,15 @@ async def power_off_machine():
         return jsonify({"status": "success", "message": "Coffee machine powered off."})
     except Exception as e:
         L.error(f"Error powering off machine: {e}")
-        return jsonify({"status": "error", "message": f"Failed to power off machine: {e}"}), 500
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to power off machine: {e}"}
+            ),
+            500,
+        )
 
-@app.route('/api/schedule/enable', methods=['POST'])
+
+@app.route("/api/schedule/enable", methods=["POST"])
 async def enable_schedule():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -90,9 +103,13 @@ async def enable_schedule():
         return jsonify({"status": "success", "message": "Schedule enabled."})
     except Exception as e:
         L.error(f"Error enabling schedule: {e}")
-        return jsonify({"status": "error", "message": f"Failed to enable schedule: {e}"}), 500
+        return (
+            jsonify({"status": "error", "message": f"Failed to enable schedule: {e}"}),
+            500,
+        )
 
-@app.route('/api/schedule/disable', methods=['POST'])
+
+@app.route("/api/schedule/disable", methods=["POST"])
 async def disable_schedule():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -101,9 +118,13 @@ async def disable_schedule():
         return jsonify({"status": "success", "message": "Schedule disabled."})
     except Exception as e:
         L.error(f"Error disabling schedule: {e}")
-        return jsonify({"status": "error", "message": f"Failed to disable schedule: {e}"}), 500
+        return (
+            jsonify({"status": "error", "message": f"Failed to disable schedule: {e}"}),
+            500,
+        )
 
-@app.route('/api/schedule', methods=['GET'])
+
+@app.route("/api/schedule", methods=["GET"])
 async def get_full_schedule():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -112,9 +133,13 @@ async def get_full_schedule():
         return jsonify({"status": "success", "schedule": schedule})
     except Exception as e:
         L.error(f"Error fetching schedule: {e}")
-        return jsonify({"status": "error", "message": f"Failed to fetch schedule: {e}"}), 500
+        return (
+            jsonify({"status": "error", "message": f"Failed to fetch schedule: {e}"}),
+            500,
+        )
 
-@app.route('/api/schedule/status', methods=['GET'])
+
+@app.route("/api/schedule/status", methods=["GET"])
 async def get_schedule_status():
     if not await ensure_connected():
         return jsonify({"error": "Coffee machine not connected."}), 503
@@ -123,22 +148,39 @@ async def get_schedule_status():
         return jsonify({"status": "success", "enabled": enabled})
     except Exception as e:
         L.error(f"Error fetching schedule status: {e}")
-        return jsonify({"status": "error", "message": f"Failed to fetch schedule status: {e}"}), 500
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to fetch schedule status: {e}"}
+            ),
+            500,
+        )
 
-@app.route('/api/disconnect', methods=['POST'])
+
+@app.route("/api/disconnect", methods=["POST"])
 async def disconnect_machine():
     global coffee_machine
     if not coffee_machine or not coffee_machine._is_connected:
-        return jsonify({"status": "info", "message": "Coffee machine already disconnected or not connected."})
+        return jsonify(
+            {
+                "status": "info",
+                "message": "Coffee machine already disconnected or not connected.",
+            }
+        )
     try:
         await coffee_machine.disconnect()
         return jsonify({"status": "success", "message": "Coffee machine disconnected."})
     except Exception as e:
         L.error(f"Error disconnecting machine: {e}")
-        return jsonify({"status": "error", "message": f"Failed to disconnect machine: {e}"}), 500
+        return (
+            jsonify(
+                {"status": "error", "message": f"Failed to disconnect machine: {e}"}
+            ),
+            500,
+        )
+
 
 # To run this application, you will need an ASGI server like Hypercorn.
 # Example: hypercorn server:app
-if __name__ == '__main__':
+if __name__ == "__main__":
     L.info("Starting Quart server...")
-    app.run(host='127.0.0.1', port=8053, debug=True)
+    app.run(host="127.0.0.1", port=8053, debug=True)

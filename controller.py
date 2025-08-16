@@ -11,6 +11,7 @@ from a53.parsers.characteristic_parsers import get_parser
 
 L = get_logger(__name__)
 
+
 async def _select_device_address(initial_address: Optional[str]) -> Optional[str]:
     address = initial_address
     if not address:
@@ -41,19 +42,59 @@ async def _select_device_address(initial_address: Optional[str]) -> Optional[str
                     L.warning("Invalid input. Please enter a number.")
     return address
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Connects and controls the Lucca A53 espresso machine.", allow_abbrev=False)
-    parser.add_argument('--address', type=str, help='Optional BLE address of the S1 device. If not provided, it will auto discover the device.')
+    parser = argparse.ArgumentParser(
+        description="Connects and controls the Lucca A53 espresso machine.",
+        allow_abbrev=False,
+    )
+    parser.add_argument(
+        "--address",
+        type=str,
+        help="Optional BLE address of the S1 device. If not provided, it will auto discover the device.",
+    )
     power_on_group = parser.add_mutually_exclusive_group()
-    power_on_group.add_argument('--power-on', action='store_true', help='Powers on the coffee machine. This will also disable the power schedule.')
-    power_on_group.add_argument('--power-off', action='store_true', help='Powers off the coffee machine. This will also disable the power schedule.')
+    power_on_group.add_argument(
+        "--power-on",
+        action="store_true",
+        help="Powers on the coffee machine. This will also disable the power schedule.",
+    )
+    power_on_group.add_argument(
+        "--power-off",
+        action="store_true",
+        help="Powers off the coffee machine. This will also disable the power schedule.",
+    )
     schedule_group = parser.add_mutually_exclusive_group()
-    schedule_group.add_argument('--enable-schedule', action='store_true', help='Enables the power schedule previously set on the machine.')
-    schedule_group.add_argument('--disable-schedule', action='store_true', help='Disable the power schedule previously set on the machine.')
-    parser.add_argument('--print-schedule', action='store_true', help='Prints the schedule in formatted JSON.')
-    parser.add_argument('--set-schedule', action='store_true', help='Reads JSON from standard input and sets the schedule.')
-    parser.add_argument('--brew-boiler-temp', action='store_true', help='Prints the brew boiler temperature and state.')
-    parser.add_argument('--steam-boiler-temp', action='store_true', help='Prints the steam boiler temperature and state.')
+    schedule_group.add_argument(
+        "--enable-schedule",
+        action="store_true",
+        help="Enables the power schedule previously set on the machine.",
+    )
+    schedule_group.add_argument(
+        "--disable-schedule",
+        action="store_true",
+        help="Disable the power schedule previously set on the machine.",
+    )
+    parser.add_argument(
+        "--print-schedule",
+        action="store_true",
+        help="Prints the schedule in formatted JSON.",
+    )
+    parser.add_argument(
+        "--set-schedule",
+        action="store_true",
+        help="Reads JSON from standard input and sets the schedule.",
+    )
+    parser.add_argument(
+        "--brew-boiler-temp",
+        action="store_true",
+        help="Prints the brew boiler temperature and state.",
+    )
+    parser.add_argument(
+        "--steam-boiler-temp",
+        action="store_true",
+        help="Prints the steam boiler temperature and state.",
+    )
 
     args = parser.parse_args()
     if len(sys.argv) == 1:
@@ -62,13 +103,14 @@ def main():
 
     asyncio.run(async_main(args))
 
+
 async def async_main(args):
     schedule_data = None
     if args.set_schedule:
         try:
             L.info("Reading schedule from standard input...")
             schedule_data = json.load(sys.stdin)
-            L.info(f'Schedule data read: {schedule_data}')
+            L.info(f"Schedule data read: {schedule_data}")
         except json.JSONDecodeError:
             L.error("Error: Invalid JSON format in standard input.")
             return
@@ -113,6 +155,7 @@ async def async_main(args):
         if machine._is_connected:
             L.info("Disconnecting...")
             await machine.disconnect()
+
 
 if __name__ == "__main__":
     main()

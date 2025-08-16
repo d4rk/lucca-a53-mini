@@ -1,6 +1,7 @@
 from bleak import BleakClient
 import asyncio
 
+
 async def read_all_characteristics(client):
     services_data = []
     for service in client.services:
@@ -40,7 +41,9 @@ async def list_characteristics(client, result_queue=None, poll_interval=0):
         services = client.services
         if services is None:
             if result_queue:
-                result_queue.put({"error": "No services found or failed to fetch services."})
+                result_queue.put(
+                    {"error": "No services found or failed to fetch services."}
+                )
             return
 
         if poll_interval and poll_interval > 0:

@@ -8,9 +8,17 @@ from a53.bt.characteristics import list_characteristics
 
 L = get_logger(__name__)
 
+
 async def main():
-    parser = argparse.ArgumentParser(description="List or poll BLE characteristics for S1 v.02.07 devices.")
-    parser.add_argument('--poll', type=float, default=0, help='Polling interval in seconds (0 = one-time read). Enables in-place display.')
+    parser = argparse.ArgumentParser(
+        description="List or poll BLE characteristics for S1 v.02.07 devices."
+    )
+    parser.add_argument(
+        "--poll",
+        type=float,
+        default=0,
+        help="Polling interval in seconds (0 = one-time read). Enables in-place display.",
+    )
     args = parser.parse_args()
 
     s1_devices = await discover_s1_devices()
@@ -38,7 +46,9 @@ async def main():
             # The curses_polling function is not async, so we can't use it directly here.
             # This would require a more significant refactoring of the display logic.
             # For now, we will just poll and print to the console.
-            L.info(f"Polling characteristics every {args.poll} seconds. Press Ctrl+C to stop.")
+            L.info(
+                f"Polling characteristics every {args.poll} seconds. Press Ctrl+C to stop."
+            )
             try:
                 while True:
                     result = await list_characteristics(client)
@@ -55,6 +65,7 @@ async def main():
             lines = format_ble_table(result)
             for line in lines:
                 print(line)
+
 
 if __name__ == "__main__":
     try:

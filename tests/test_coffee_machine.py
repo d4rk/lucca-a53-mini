@@ -1,4 +1,3 @@
-
 import unittest
 from unittest.mock import patch, AsyncMock
 import asyncio
@@ -6,9 +5,10 @@ from datetime import datetime
 
 from a53.coffee_machine import CoffeeMachine
 
+
 class TestCoffeeMachine(unittest.TestCase):
 
-    @patch('a53.coffee_machine.BleakClient')
+    @patch("a53.coffee_machine.BleakClient")
     def setUp(self, MockBleakClient):
         self.mock_bleak_client = MockBleakClient.return_value
         self.mock_bleak_client.connect = AsyncMock()
@@ -35,24 +35,28 @@ class TestCoffeeMachine(unittest.TestCase):
     def test_get_brew_boiler_temp(self):
         async def run_test():
             self.machine._is_connected = True
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray([0x84, 0x03, 0x01, 0x00])  # 90 degrees, status 1
+            self.mock_bleak_client.read_gatt_char.return_value = bytearray(
+                [0x84, 0x03, 0x01, 0x00]
+            )  # 90 degrees, status 1
 
             data = await self.machine.get_brew_boiler_temp()
-            self.assertEqual(data['name'], "Brew")
-            self.assertEqual(data['state'], "3")
-            self.assertEqual(data['temp'], "90.0")
+            self.assertEqual(data["name"], "Brew")
+            self.assertEqual(data["state"], "3")
+            self.assertEqual(data["temp"], "90.0")
 
         asyncio.run(run_test())
 
     def test_get_steam_boiler_temp(self):
         async def run_test():
             self.machine._is_connected = True
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray([0x14, 0x05, 0x01, 0x00])  # 130 degrees, status 1
+            self.mock_bleak_client.read_gatt_char.return_value = bytearray(
+                [0x14, 0x05, 0x01, 0x00]
+            )  # 130 degrees, status 1
 
             data = await self.machine.get_steam_boiler_temp()
-            self.assertEqual(data['name'], "Steam")
-            self.assertEqual(data['state'], "5")
-            self.assertEqual(data['temp'], "130.0")
+            self.assertEqual(data["name"], "Steam")
+            self.assertEqual(data["state"], "5")
+            self.assertEqual(data["temp"], "130.0")
 
         asyncio.run(run_test())
 
@@ -62,11 +66,15 @@ class TestCoffeeMachine(unittest.TestCase):
 
             # Enable schedule
             await self.machine.enable_schedule(True)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(self.machine.UUID_TIMER_STATE, bytearray([0x01]))
+            self.mock_bleak_client.write_gatt_char.assert_called_with(
+                self.machine.UUID_TIMER_STATE, bytearray([0x01])
+            )
 
             # Disable schedule
             await self.machine.enable_schedule(False)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(self.machine.UUID_TIMER_STATE, bytearray([0x00]))
+            self.mock_bleak_client.write_gatt_char.assert_called_with(
+                self.machine.UUID_TIMER_STATE, bytearray([0x00])
+            )
 
         asyncio.run(run_test())
 
@@ -90,22 +98,23 @@ class TestCoffeeMachine(unittest.TestCase):
         async def run_test():
             self.machine._is_connected = True
             schedule = {
-                "Monday": [{
-                    "start": "06:00",
-                    "end": "09:00",
-                    "boiler_on": True
-                }]
+                "Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}]
             }
 
             # Set schedule
             await self.machine.set_schedule(schedule)
             # We don't assert the encoded value here as it's complex. We trust the parser tests.
-            self.mock_bleak_client.write_gatt_char.assert_called_with(self.machine.UUID_SCHEDULE, unittest.mock.ANY)
+            self.mock_bleak_client.write_gatt_char.assert_called_with(
+                self.machine.UUID_SCHEDULE, unittest.mock.ANY
+            )
 
             # Get schedule
             # Mock the read_gatt_char to return the encoded schedule
             from a53.parsers.schedule_coder import ScheduleCoder
-            self.mock_bleak_client.read_gatt_char.return_value = ScheduleCoder.encode_schedule(schedule)
+
+            self.mock_bleak_client.read_gatt_char.return_value = (
+                ScheduleCoder.encode_schedule(schedule)
+            )
             decoded_schedule = await self.machine.get_schedule()
             self.assertEqual(decoded_schedule["Monday"][0]["start"], "06:00")
 
@@ -118,17 +127,25 @@ class TestCoffeeMachine(unittest.TestCase):
 
             # Set current time
             await self.machine.set_current_time(now)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(self.machine.UUID_CURRENT_TIME, unittest.mock.ANY)
+            self.mock_bleak_client.write_gatt_char.assert_called_with(
+                self.machine.UUID_CURRENT_TIME, unittest.mock.ANY
+            )
 
             # Get current time
             from a53.parsers.characteristic_parsers import DateTimeParser
-            self.mock_bleak_client.read_gatt_char.return_value = DateTimeParser("Current Time").encode_value(now)
+
+            self.mock_bleak_client.read_gatt_char.return_value = DateTimeParser(
+                "Current Time"
+            ).encode_value(now)
             decoded_time = await self.machine.get_current_time()
-            self.assertEqual(decoded_time.strftime("%Y-%m-%d %H:%M:%S"), now.strftime("%Y-%m-%d %H:%M:%S"))
+            self.assertEqual(
+                decoded_time.strftime("%Y-%m-%d %H:%M:%S"),
+                now.strftime("%Y-%m-%d %H:%M:%S"),
+            )
 
         asyncio.run(run_test())
 
-    @patch('a53.coffee_machine.asyncio.sleep', return_value=None)
+    @patch("a53.coffee_machine.asyncio.sleep", return_value=None)
     def test_power_on_and_off(self, mock_sleep):
         async def run_test():
             self.machine._is_connected = True

@@ -7,6 +7,7 @@ from a53.common.logging import get_logger
 
 L = get_logger(__name__)
 
+
 class CoffeeMachine:
     """
     A high-level API for controlling the coffee machine via Bluetooth LE.
@@ -108,11 +109,7 @@ class CoffeeMachine:
             if parsed_data and len(parsed_data) >= 2:
                 state_str = parsed_data[0][1]
                 temp_str = parsed_data[1][1]
-                return {
-                    "name": name,
-                    "state": state_str,
-                    "temp": temp_str
-                }
+                return {"name": name, "state": state_str, "temp": temp_str}
         return {"name": name, "state": "Unknown", "temp": "Unknown"}
 
     async def enable_schedule(self, enabled: bool):
@@ -140,7 +137,9 @@ class CoffeeMachine:
             raise Exception(f"No parser found for UUID {self.UUID_TIMER_STATE}")
 
         value = parser.encode_value(enabled)
-        L.info(f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})...")
+        L.info(
+            f"Setting timer state to {'Enabled' if enabled else 'Disabled'} (writing {value.hex()} to {self.UUID_TIMER_STATE})..."
+        )
         await self._client.write_gatt_char(self.UUID_TIMER_STATE, value)
         L.info("Timer state command sent.")
 
@@ -225,7 +224,9 @@ class CoffeeMachine:
 
         encoded_schedule = parser.encode_value(schedule_data)
 
-        L.info(f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})...")
+        L.info(
+            f"Setting schedule (writing {encoded_schedule.hex()} to {self.UUID_SCHEDULE})..."
+        )
         await self._client.write_gatt_char(self.UUID_SCHEDULE, encoded_schedule)
         L.info("Schedule command sent.")
 
@@ -298,7 +299,9 @@ class CoffeeMachine:
         Args:
             dt: A datetime object representing the time to set.
         """
-        await self._set_time_characteristic(dt, self.UUID_LAST_SYNC_TIME, "last sync time")
+        await self._set_time_characteristic(
+            dt, self.UUID_LAST_SYNC_TIME, "last sync time"
+        )
 
     async def power_on(self):
         """
@@ -332,17 +335,13 @@ class CoffeeMachine:
 
         L.info("Setting new schedule...")
         new_schedule = {
-            "Monday": [{
-                "start": "09:00",
-                "end": "10:00",
-                "boiler_on": True
-            }],
+            "Monday": [{"start": "09:00", "end": "10:00", "boiler_on": True}],
             "Tuesday": [],
             "Wednesday": [],
             "Thursday": [],
             "Friday": [],
             "Saturday": [],
-            "Sunday": []
+            "Sunday": [],
         }
         await self._set_schedule_unlocked(new_schedule)
         L.info("New schedule set.")
@@ -392,7 +391,9 @@ class CoffeeMachine:
 
         value = parser.encode_value(dt)
 
-        L.info(f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})...")
+        L.info(
+            f"Setting {description} to {dt.strftime('%Y-%m-%d %H:%M:%S')} (writing {value.hex()} to {uuid})..."
+        )
         await self._client.write_gatt_char(uuid, value)
         L.info(f"{description.capitalize()} command sent.")
 
@@ -402,6 +403,7 @@ class CoffeeMachine:
         """
         try:
             import json
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_filename = f"schedule.{timestamp}.json"
             with open(backup_filename, "w") as f:
