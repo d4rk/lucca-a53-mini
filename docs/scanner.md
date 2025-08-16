@@ -2,7 +2,7 @@
 
 This script is a utility for scanning and displaying Bluetooth Low Energy (BLE) characteristics of a Lucca A53 Mini or other S1-compatible espresso machines.
 
-![screenshot of scanner.py](../images/screenshot1.png?raw=true)
+![screenshot of scanner.py](../images/screenshot_scanner.png?raw=true)
 
 ## Features
 

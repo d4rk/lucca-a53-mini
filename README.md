@@ -1,5 +1,7 @@
 # La Spaziale Vivaldi / LUCCA A53 Automation Tools
 
+![image of the A53 Mini](images/a53.png?raw=true)
+
 > *_STILL UNDER DEVELOPMENT_*
 
 This project allows you to interact with S1 v.02.07 BLE devices,
@@ -17,9 +19,8 @@ The official app is the S1 Timer, which is very bare-bones.
 *   [Setup](#setup)
 *   [Documentation](#documentation)
 *   [Usage](#usage)
-*   [Protocol Details](#protocol-details)
+*   [Protocol Details](#bluetooth-protocol-details)
 
-![image of the A53 Mini](images/a53.jpg?raw=true)
 
 ## Setup
 
