@@ -83,13 +83,15 @@ class TestServer(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(data["brew_boiler"]["temp"], "92.0")
         self.assertEqual(data["steam_boiler"]["temp"], "105.0")
 
-    async def test_power_on_machine_success(self):
+    @patch("a53.coffee_machine.asyncio.sleep", return_value=None)
+    async def test_power_on_machine_success(self, _):
         response = await self.app_client.post("/api/power/on")
         self.assertEqual(response.status_code, 200)
         data = await response.get_json()
         self.assertEqual(data["status"], "success")
 
-    async def test_power_off_machine_success(self):
+    @patch("a53.coffee_machine.asyncio.sleep", return_value=None)
+    async def test_power_off_machine_success(self, _):
         response = await self.app_client.post("/api/power/off")
         self.assertEqual(response.status_code, 200)
         data = await response.get_json()

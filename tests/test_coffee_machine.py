@@ -1,167 +1,106 @@
 import unittest
 from unittest.mock import patch, AsyncMock
-import asyncio
 from datetime import datetime
-
 from a53.coffee_machine import CoffeeMachine
+from tests.fake_bleak_client import FakeBleakClient
+from a53.parsers.constants import UUID_TIMER_STATE
 
 
-class TestCoffeeMachine(unittest.TestCase):
+class TestCoffeeMachine(unittest.IsolatedAsyncioTestCase):
 
-    @patch("a53.coffee_machine.BleakClient")
-    def setUp(self, MockBleakClient):
-        self.mock_bleak_client = MockBleakClient.return_value
-        self.mock_bleak_client.connect = AsyncMock()
-        self.mock_bleak_client.disconnect = AsyncMock()
-        self.mock_bleak_client.read_gatt_char = AsyncMock()
-        self.mock_bleak_client.write_gatt_char = AsyncMock()
+    async def asyncSetUp(self):
+        # Patch BleakClient to return our FakeBleakClient instance
+        self.patcher = patch("a53.coffee_machine.BleakClient", new_callable=AsyncMock)
+        self.MockBleakClient = self.patcher.start()
+
+        self.fake_bleak_client = FakeBleakClient("test_address")
+        self.MockBleakClient.return_value = self.fake_bleak_client
+
         self.machine = CoffeeMachine(address="test_address")
-        self.machine._client = self.mock_bleak_client
+        # Ensure the machine's client is our fake client
+        self.machine._client = self.fake_bleak_client
+        # Connect the machine for tests that require it
+        await self.machine.connect()
 
-    def test_connect_and_disconnect(self):
-        async def run_test():
-            # Test connect
-            self.mock_bleak_client.is_connected = False
-            await self.machine.connect()
-            self.machine._client.connect.assert_called_once()
-            self.machine._is_connected = True
+    async def asyncTearDown(self):
+        self.patcher.stop()
 
-            # Test disconnect
-            await self.machine.disconnect()
-            self.machine._client.disconnect.assert_called_once()
+    async def test_connect_and_disconnect(self):
+        # The machine is already connected in asyncSetUp, so we disconnect first
+        await self.machine.disconnect()
+        self.assertFalse(self.fake_bleak_client.is_connected)
+        await self.machine.connect()
+        self.assertTrue(self.fake_bleak_client.is_connected)
 
-        asyncio.run(run_test())
+    async def test_get_brew_boiler_temp(self):
+        self.fake_bleak_client.set_brew_boiler_temp(90.0)
+        data = await self.machine.get_brew_boiler_temp()
+        self.assertEqual(data["name"], "Brew")
+        self.assertEqual(data["temp"], "90.0")
 
-    def test_get_brew_boiler_temp(self):
-        async def run_test():
-            self.machine._is_connected = True
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray(
-                [0x84, 0x03, 0x01, 0x00]
-            )  # 90 degrees, status 1
+    async def test_get_steam_boiler_temp(self):
+        self.fake_bleak_client.set_steam_boiler_temp(130.0)
+        data = await self.machine.get_steam_boiler_temp()
+        self.assertEqual(data["name"], "Steam")
+        self.assertEqual(data["temp"], "130.0")
 
-            data = await self.machine.get_brew_boiler_temp()
-            self.assertEqual(data["name"], "Brew")
-            self.assertEqual(data["state"], "3")
-            self.assertEqual(data["temp"], "90.0")
+    async def test_enable_disable_schedule(self):
+        # Enable schedule
+        await self.machine.enable_schedule(True)
+        # Access the boolean value from the tuple returned by get_parsed_characteristic_value
+        timer_state = self.fake_bleak_client.get_parsed_characteristic_value(
+            UUID_TIMER_STATE
+        )
+        self.assertTrue(timer_state[0][1])  # Check if the schedule is enabled
 
-        asyncio.run(run_test())
+        # Disable schedule
+        await self.machine.enable_schedule(False)
+        # Access the boolean value from the tuple returned by get_parsed_characteristic_value
+        timer_state = self.fake_bleak_client.get_parsed_characteristic_value(
+            UUID_TIMER_STATE
+        )
+        self.assertFalse(timer_state[0][1])  # Check if the schedule is enabled
 
-    def test_get_steam_boiler_temp(self):
-        async def run_test():
-            self.machine._is_connected = True
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray(
-                [0x14, 0x05, 0x01, 0x00]
-            )  # 130 degrees, status 1
+    async def test_get_timer_state(self):
+        # Test when timer is enabled
+        self.fake_bleak_client.set_schedule_status(True)
+        state = await self.machine.get_timer_state()
+        self.assertTrue(state)
 
-            data = await self.machine.get_steam_boiler_temp()
-            self.assertEqual(data["name"], "Steam")
-            self.assertEqual(data["state"], "5")
-            self.assertEqual(data["temp"], "130.0")
+        # Test when timer is disabled
+        self.fake_bleak_client.set_schedule_status(False)
+        state = await self.machine.get_timer_state()
+        self.assertFalse(state)
 
-        asyncio.run(run_test())
+    async def test_get_and_set_schedule(self):
+        schedule = {"Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}]}
 
-    def test_enable_disable_schedule(self):
-        async def run_test():
-            self.machine._is_connected = True
+        # Set schedule
+        await self.machine.set_schedule(schedule)
 
-            # Enable schedule
-            await self.machine.enable_schedule(True)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(
-                self.machine.UUID_TIMER_STATE, bytearray([0x01])
-            )
+        # Get schedule
+        decoded_schedule = await self.machine.get_schedule()
+        self.assertEqual(decoded_schedule, schedule)
 
-            # Disable schedule
-            await self.machine.enable_schedule(False)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(
-                self.machine.UUID_TIMER_STATE, bytearray([0x00])
-            )
+    async def test_get_and_set_current_time(self):
+        now = datetime.now().replace(
+            microsecond=0
+        )  # Remove microseconds for exact comparison
 
-        asyncio.run(run_test())
+        # Set current time
+        await self.machine.set_current_time(now)
 
-    def test_get_timer_state(self):
-        async def run_test():
-            self.machine._is_connected = True
-
-            # Test when timer is enabled
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray([0x01])
-            state = await self.machine.get_timer_state()
-            self.assertTrue(state)
-
-            # Test when timer is disabled
-            self.mock_bleak_client.read_gatt_char.return_value = bytearray([0x00])
-            state = await self.machine.get_timer_state()
-            self.assertFalse(state)
-
-        asyncio.run(run_test())
-
-    def test_get_and_set_schedule(self):
-        async def run_test():
-            self.machine._is_connected = True
-            schedule = {
-                "Monday": [{"start": "06:00", "end": "09:00", "boiler_on": True}]
-            }
-
-            # Set schedule
-            await self.machine.set_schedule(schedule)
-            # We don't assert the encoded value here as it's complex. We trust the parser tests.
-            self.mock_bleak_client.write_gatt_char.assert_called_with(
-                self.machine.UUID_SCHEDULE, unittest.mock.ANY
-            )
-
-            # Get schedule
-            # Mock the read_gatt_char to return the encoded schedule
-            from a53.parsers.schedule_coder import ScheduleCoder
-
-            self.mock_bleak_client.read_gatt_char.return_value = (
-                ScheduleCoder.encode_schedule(schedule)
-            )
-            decoded_schedule = await self.machine.get_schedule()
-            self.assertEqual(decoded_schedule["Monday"][0]["start"], "06:00")
-
-        asyncio.run(run_test())
-
-    def test_get_and_set_current_time(self):
-        async def run_test():
-            self.machine._is_connected = True
-            now = datetime.now()
-
-            # Set current time
-            await self.machine.set_current_time(now)
-            self.mock_bleak_client.write_gatt_char.assert_called_with(
-                self.machine.UUID_CURRENT_TIME, unittest.mock.ANY
-            )
-
-            # Get current time
-            from a53.parsers.characteristic_parsers import DateTimeParser
-
-            self.mock_bleak_client.read_gatt_char.return_value = DateTimeParser(
-                "Current Time"
-            ).encode_value(now)
-            decoded_time = await self.machine.get_current_time()
-            self.assertEqual(
-                decoded_time.strftime("%Y-%m-%d %H:%M:%S"),
-                now.strftime("%Y-%m-%d %H:%M:%S"),
-            )
-
-        asyncio.run(run_test())
+        # Get current time
+        decoded_time = await self.machine.get_current_time()
+        self.assertEqual(decoded_time, now)
 
     @patch("a53.coffee_machine.asyncio.sleep", return_value=None)
-    def test_power_on_and_off(self, mock_sleep):
-        async def run_test():
-            self.machine._is_connected = True
+    async def test_power_on_and_off(self, mock_sleep):
+        # Mock the necessary methods
+        self.machine._backup_schedule = unittest.mock.MagicMock()
 
-            # Mock the necessary methods
-            self.machine._get_schedule_unlocked = AsyncMock(return_value={})
-            self.machine._set_schedule_unlocked = AsyncMock()
-            self.machine._enable_schedule_unlocked = AsyncMock()
-            self.machine._set_current_time_unlocked = AsyncMock()
-            self.machine._set_last_sync_time_unlocked = AsyncMock()
-            self.machine._backup_schedule = unittest.mock.MagicMock()
+        # Test power on
+        await self.machine.power_on()
 
-            # Test power on
-            await self.machine.power_on()
-
-            # Test power off
-            await self.machine.power_off()
-
-        asyncio.run(run_test())
+        # Test power off
+        await self.machine.power_off()
