@@ -116,8 +116,14 @@ class BoilerParser(CharacteristicParser):
         return results
 
     def encode_value(self, value):
-        """Boiler characteristics are read-only."""
-        raise NotImplementedError("Boiler characteristics are read-only.")
+        """Encodes a tuple (temperature, status_code_byte) into a bytearray.
+        Temperature is a float, status_code_byte is an int.
+        """
+        temperature, status_code_byte = value
+        temp_int = int(temperature * 10)
+        return bytearray(
+            [temp_int & 0xFF, (temp_int >> 8) & 0xFF, status_code_byte, 0x00]
+        )
 
 
 # Parser registry
