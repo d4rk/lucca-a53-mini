@@ -412,12 +412,4 @@ class CoffeeMachine:
         except Exception as e:
             L.warning(f"Warning: Could not save original schedule: {e}")
 
-    @staticmethod
-    async def discover():
-        """
-        Discovers available S1 coffee machines.
-
-        Returns:
-            A list of discovered S1 devices.
-        """
-        return await discover_s1_devices()
+    

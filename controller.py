@@ -4,6 +4,7 @@ import json
 import sys
 from typing import Optional
 from a53.coffee_machine import CoffeeMachine
+from a53.bt.ble_utils import discover_s1_devices
 from datetime import datetime
 from a53.common.logging import get_logger
 
@@ -16,7 +17,7 @@ async def _select_device_address(initial_address: Optional[str]) -> Optional[str
     address = initial_address
     if not address:
         L.info("Discovering S1 devices...")
-        s1_devices = await CoffeeMachine.discover()
+        s1_devices = await discover_s1_devices()
         if not s1_devices:
             L.info("No S1 devices found.")
             return None

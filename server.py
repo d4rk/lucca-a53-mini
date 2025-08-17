@@ -2,6 +2,7 @@ import asyncio
 from quart import Quart, jsonify, request
 from a53.coffee_machine import CoffeeMachine
 from a53.common.logging import get_logger
+from a53.bt.ble_utils import discover_s1_devices
 
 L = get_logger(__name__)
 app = Quart(__name__)
@@ -20,7 +21,7 @@ async def connect_to_machine():
             if MACHINE_ADDRESS:
                 L.info(f"Reusing previously selected address: {MACHINE_ADDRESS}")
             else:
-                s1_devices = await CoffeeMachine.discover()
+                s1_devices = await discover_s1_devices()
                 if not s1_devices:
                     L.error("No S1 devices found. Cannot connect to coffee machine.")
                     return
