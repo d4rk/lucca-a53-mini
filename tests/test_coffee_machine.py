@@ -36,13 +36,13 @@ class TestCoffeeMachine(unittest.IsolatedAsyncioTestCase):
         self.fake_bleak_client.set_brew_boiler_temp(90.0)
         data = await self.machine.get_brew_boiler_temp()
         self.assertEqual(data["name"], "Brew")
-        self.assertEqual(data["temp"], "90.0")
+        self.assertEqual(data["temp"], 90.0)
 
     async def test_get_steam_boiler_temp(self):
         self.fake_bleak_client.set_steam_boiler_temp(130.0)
         data = await self.machine.get_steam_boiler_temp()
         self.assertEqual(data["name"], "Steam")
-        self.assertEqual(data["temp"], "130.0")
+        self.assertEqual(data["temp"], 130.0)
 
     async def test_enable_disable_schedule(self):
         # Enable schedule

@@ -49,7 +49,7 @@ class TestCharacteristicParsers(unittest.TestCase):
         # Simulate raw data for brew boiler
         raw_data = bytearray([0x5A, 0x00, 0x01, 0x00])  # 90 degrees, status 1
         decoded = parser.parse_value(raw_data)
-        self.assertIn(("Brew Boiler Temp", "9.0"), decoded)
+        self.assertIn(("Brew Boiler Temp", 9.0), decoded)
 
     def test_get_parser(self):
         self.assertIsInstance(get_parser(UUID_CURRENT_TIME), DateTimeParser)
