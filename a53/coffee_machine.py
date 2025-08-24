@@ -4,6 +4,7 @@ from a53.bt.ble_utils import discover_s1_devices
 from a53.parsers.characteristic_parsers import get_parser
 from datetime import datetime, timedelta
 from a53.common.logging import get_logger
+from a53.common.power_state_estimator import PowerStateEstimator, PowerState
 
 L = get_logger(__name__)
 
@@ -37,6 +38,8 @@ class CoffeeMachine:
         self._is_connected = False
         self._connection_lock = asyncio.Lock()
         self._auto_reconnect = True  # Automatically attempt to reconnect on disconnect
+        self.brew_boiler_estimator = PowerStateEstimator()
+        self.steam_boiler_estimator = PowerStateEstimator()
 
     def _on_disconnect(self, client):
         self._is_connected = False
@@ -93,6 +96,30 @@ class CoffeeMachine:
         """
         return await self._get_boiler_data(self.UUID_STEAM_BOILER, "Steam")
 
+    @property
+    def is_on(self) -> bool:
+        """
+        Checks if either boiler is estimated to be ON.
+
+        Returns:
+            True if either boiler is ON, False otherwise.
+        """
+        return self.brew_boiler_estimator.is_on
+
+    @property
+    def brew_boiler_power_state(self) -> PowerState:
+        """
+        Gets the estimated power state of the brew boiler.
+        """
+        return self.brew_boiler_estimator.power_state
+
+    @property
+    def steam_boiler_power_state(self) -> PowerState:
+        """
+        Gets the estimated power state of the steam boiler.
+        """
+        return self.steam_boiler_estimator.power_state
+
     async def _get_boiler_data(self, uuid: str, name: str) -> dict:
         """
         Reads and parses boiler data from a given characteristic.
@@ -108,8 +135,12 @@ class CoffeeMachine:
             parsed_data = parser.parse_value(raw_data)
             if parsed_data and len(parsed_data) >= 2:
                 state_str = parsed_data[0][1]
-                temp_str = parsed_data[1][1]
-                return {"name": name, "state": state_str, "temp": temp_str}
+                temp_value = parsed_data[1][1]
+                if name == "Brew":
+                    self.brew_boiler_estimator.temperature_updated(temp_value)
+                elif name == "Steam":
+                    self.steam_boiler_estimator.temperature_updated(temp_value)
+                return {"name": name, "state": state_str, "temp": temp_value}
         return {"name": name, "state": "Unknown", "temp": "Unknown"}
 
     async def enable_schedule(self, enabled: bool):
@@ -321,12 +352,19 @@ class CoffeeMachine:
             await self._set_power_state(self.POWER_OFF)
         L.info("Machine powered off successfully.")
 
-    async def _set_power_state(self, power_state: bool):
+    async def _set_power_state(self, power_state: bool, steam_boiler: bool = True):
         """
         Sets the power state of the machine by setting a specific schedule and manipulating time.
         """
         if not self._is_connected:
             raise ConnectionError("Not connected to the coffee machine.")
+
+        self.brew_boiler_estimator.set_power_state(
+            PowerState.ON if power_state else PowerState.OFF
+        )
+        self.steam_boiler_estimator.set_power_state(
+            PowerState.ON if steam_boiler else PowerState.OFF
+        )
 
         L.info("Reading current schedule...")
         original_schedule = await self._get_schedule_unlocked()
@@ -335,7 +373,7 @@ class CoffeeMachine:
 
         L.info("Setting new schedule...")
         new_schedule = {
-            "Monday": [{"start": "09:00", "end": "10:00", "boiler_on": True}],
+            "Monday": [{"start": "09:00", "end": "10:00", "boiler_on": steam_boiler}],
             "Tuesday": [],
             "Wednesday": [],
             "Thursday": [],
@@ -411,5 +449,3 @@ class CoffeeMachine:
             L.info(f"Original schedule saved to {backup_filename}")
         except Exception as e:
             L.warning(f"Warning: Could not save original schedule: {e}")
-
-    
