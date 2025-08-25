@@ -106,14 +106,12 @@ class CoffeeMachine:
         """
         return self.brew_boiler_estimator.is_on
 
-    @property
     def brew_boiler_power_state(self) -> PowerState:
         """
         Gets the estimated power state of the brew boiler.
         """
         return self.brew_boiler_estimator.power_state
 
-    @property
     def steam_boiler_power_state(self) -> PowerState:
         """
         Gets the estimated power state of the steam boiler.
