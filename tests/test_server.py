@@ -1,7 +1,8 @@
 import unittest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from tests.fake_bleak_client import FakeBleakClient
+from a53.common.power_state_estimator import PowerState
 
 # Import the server module directly
 import server
@@ -82,6 +83,16 @@ class TestServer(unittest.IsolatedAsyncioTestCase):
         data = await response.get_json()
         self.assertEqual(data["brew_boiler"]["temp"], 92.0)
         self.assertEqual(data["steam_boiler"]["temp"], 105.0)
+
+    async def test_get_power_status_success(self):
+        # Set the power states for this test
+        with patch.object(self.coffee_machine_instance_in_server, 'brew_boiler_power_state', return_value=PowerState.ON):
+            with patch.object(self.coffee_machine_instance_in_server, 'steam_boiler_power_state', return_value=PowerState.OFF):
+                response = await self.app_client.get("/api/power/status")
+                self.assertEqual(response.status_code, 200)
+                data = await response.get_json()
+                self.assertEqual(data["brew_boiler"], "on")
+                self.assertEqual(data["steam_boiler"], "off")
 
     @patch("a53.coffee_machine.asyncio.sleep", return_value=None)
     async def test_power_on_machine_success(self, _):

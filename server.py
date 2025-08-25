@@ -63,6 +63,22 @@ async def get_temperatures():
         return jsonify({"error": f"Error fetching temperatures: {e}"}), 500
 
 
+@app.route("/api/power/status", methods=["GET"])
+async def get_power_status():
+    if not await ensure_connected():
+        return jsonify({"error": "Coffee machine not connected."}), 503
+
+    try:
+        brew_boiler_status = coffee_machine.brew_boiler_power_state().value
+        steam_boiler_status = coffee_machine.steam_boiler_power_state().value
+        return jsonify(
+            {"brew_boiler": brew_boiler_status, "steam_boiler": steam_boiler_status}
+        )
+    except Exception as e:
+        L.error(f"Error fetching power status: {e}")
+        return jsonify({"error": f"Error fetching power status: {e}"}), 500
+
+
 @app.route("/api/power/on", methods=["POST"])
 async def power_on_machine():
     if not await ensure_connected():
