@@ -10,56 +10,190 @@ This script runs a web server that exposes a RESTful API to control the Lucca A5
 
 ## API Endpoints
 
-- `GET /api/temperature`: Returns the brew and steam boiler temperatures.
-- `GET /api/power/status`: Returns the power status of the brew and steam boilers.
-- `POST /api/power/on`: Powers on the machine.
-- `POST /api/power/off`: Powers off the machine.
-- `POST /api/schedule/enable`: Enables the power schedule.
-- `POST /api/schedule/disable`: Disables the power schedule.
-- `GET /api/schedule`: Returns the full power schedule.
-- `GET /api/schedule/status`: Returns the status of the power schedule (enabled/disabled).
-- `POST /api/disconnect`: Disconnects from the machine.
+The base URL for all endpoints is `http://127.0.0.1:8053`.
 
-## Usage
+---
 
-To run the server, you need an ASGI server like Hypercorn or Uvicorn.
+### Get Temperatures
 
-```bash
-hypercorn server:app
-```
+**GET** `/api/temperature`
 
-Or for development:
+Returns the current temperatures of the brew and steam boilers in Celsius.
 
-```bash
-python server.py
-```
+**Responses**
 
-This will start the server on `127.0.0.1:8053` by default.
+-   **`200 OK`**: Successful response.
+    ```json
+    {
+      "brew_boiler": 95,
+      "steam_boiler": 125
+    }
+    ```
 
-### Example cURL Requests
+---
 
-**Get temperatures:**
+### Get Power Status
 
-```bash
-curl http://127.0.0.1:8053/api/temperature
-```
+**GET** `/api/power/status`
 
-**Get power status:**
+Returns the power status of the brew and steam boilers.
 
-```bash
-curl http://127.0.0.1:8053/api/power/status
-```
+**Responses**
 
-**Power on the machine:**
+-   **`200 OK`**: Successful response. The status can be one of `on`, `off`, `warming_up`, or `unknown`.
+    ```json
+    {
+      "brew_boiler": "on",
+      "steam_boiler": "warming_up"
+    }
+    ```
 
-```bash
-curl -X POST http://1.0.0.1:8053/api/power/on
-```
+---
 
-## How it Works
+### Power On Machine
 
-1.  **Web Server:** The script uses the Quart web framework to create an asynchronous web server.
-2.  **Startup Connection:** Before the server starts handling requests, it attempts to discover and connect to an S1 device.
-3.  **Request Handling:** Each API endpoint is mapped to a Python function that interacts with the `CoffeeMachine` object.
-4.  **Connection Management:** The server uses a lock to prevent multiple concurrent connection attempts. It also has a mechanism to try and reconnect if the connection is lost.
-5.  **JSON Responses:** The API endpoints return data in JSON format, making it easy to consume by other applications.
+**POST** `/api/power/on`
+
+Powers on the coffee machine.
+
+**Responses**
+
+-   **`200 OK`**: The machine was successfully powered on.
+    ```json
+    {
+      "status": "success",
+      "message": "Coffee machine powered on."
+    }
+    ```
+
+---
+
+### Power Off Machine
+
+**POST** `/api/power/off`
+
+Powers off the coffee machine.
+
+**Responses**
+
+-   **`200 OK`**: The machine was successfully powered off.
+    ```json
+    {
+      "status": "success",
+      "message": "Coffee machine powered off."
+    }
+    ```
+
+---
+
+### Enable Schedule
+
+**POST** `/api/schedule/enable`
+
+Enables the power-on/off schedule.
+
+**Responses**
+
+-   **`200 OK`**: The schedule was successfully enabled.
+    ```json
+    {
+      "status": "success",
+      "message": "Schedule enabled."
+    }
+    ```
+
+---
+
+### Disable Schedule
+
+**POST** `/api/schedule/disable`
+
+Disables the power-on/off schedule.
+
+**Responses**
+
+-   **`200 OK`**: The schedule was successfully disabled.
+    ```json
+    {
+      "status": "success",
+      "message": "Schedule disabled."
+    }
+    ```
+
+---
+
+### Get Schedule
+
+**GET** `/api/schedule`
+
+Returns the full power-on/off schedule.
+
+**Responses**
+
+-   **`200 OK`**: Successful response.
+    ```json
+    {
+      "status": "success",
+      "schedule": {
+        "monday": {"on": "07:00", "off": "15:00"},
+        "tuesday": {"on": "07:00", "off": "15:00"},
+        "wednesday": {"on": "07:00", "off": "15:00"},
+        "thursday": {"on": "07:00", "off": "15:00"},
+        "friday": {"on": "07:00", "off": "15:00"},
+        "saturday": {"on": "09:00", "off": "17:00"},
+        "sunday": {"on": "09:00", "off": "17:00"}
+      }
+    }
+    ```
+
+---
+
+### Get Schedule Status
+
+**GET** `/api/schedule/status`
+
+Returns whether the power-on/off schedule is currently enabled.
+
+**Responses**
+
+-   **`200 OK`**: Successful response.
+    ```json
+    {
+      "status": "success",
+      "enabled": true
+    }
+    ```
+
+---
+
+### Disconnect Machine
+
+**POST** `/api/disconnect`
+
+Disconnects from the coffee machine.
+
+**Responses**
+
+-   **`200 OK`**: The machine was successfully disconnected.
+    ```json
+    {
+      "status": "success",
+      "message": "Coffee machine disconnected."
+    }
+    ```
+-   **`200 OK`**: The machine was already disconnected.
+    ```json
+    {
+        "status": "info",
+        "message": "Coffee machine already disconnected or not connected."
+    }
+    ```
+
+## Common Errors
+
+-   **`503 Service Unavailable`**: This error is returned when the server is unable to connect to the coffee machine.
+    ```json
+    {
+      "error": "Coffee machine not connected."
+    }
+    ```
