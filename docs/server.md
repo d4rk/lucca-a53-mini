@@ -10,14 +10,15 @@ This script runs a web server that exposes a RESTful API to control the Lucca A5
 
 ## API Endpoints
 
-- `GET /api/temperature`: Get the brew and steam boiler temperatures.
-- `POST /api/power/on`: Power on the machine.
-- `POST /api/power/off`: Power off the machine.
-- `POST /api/schedule/enable`: Enable the power schedule.
-- `POST /api/schedule/disable`: Disable the power schedule.
-- `GET /api/schedule`: Get the full power schedule.
-- `GET /api/schedule/status`: Get the status of the power schedule (enabled/disabled).
-- `POST /api/disconnect`: Disconnect from the machine.
+- `GET /api/temperature`: Returns the brew and steam boiler temperatures.
+- `GET /api/power/status`: Returns the power status of the brew and steam boilers.
+- `POST /api/power/on`: Powers on the machine.
+- `POST /api/power/off`: Powers off the machine.
+- `POST /api/schedule/enable`: Enables the power schedule.
+- `POST /api/schedule/disable`: Disables the power schedule.
+- `GET /api/schedule`: Returns the full power schedule.
+- `GET /api/schedule/status`: Returns the status of the power schedule (enabled/disabled).
+- `POST /api/disconnect`: Disconnects from the machine.
 
 ## Usage
 
@@ -43,10 +44,16 @@ This will start the server on `127.0.0.1:8053` by default.
 curl http://127.0.0.1:8053/api/temperature
 ```
 
+**Get power status:**
+
+```bash
+curl http://127.0.0.1:8053/api/power/status
+```
+
 **Power on the machine:**
 
 ```bash
-curl -X POST http://127.0.0.1:8053/api/power/on
+curl -X POST http://1.0.0.1:8053/api/power/on
 ```
 
 ## How it Works
