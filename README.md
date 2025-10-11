@@ -118,6 +118,3 @@ The S1 device communicates over Bluetooth Low Energy (BLE) using custom characte
         *   Bytes 0-1: Temperature (little-endian, value / 10.0 for °C)
         *   Byte 2: Status code? (ranges from 0-4 as temp goes up)
         *   Byte 3: Unknown/Reserved
-
-> [!NOTE]
-> The temperature readings are a bit interesting. Byte 2 in both cases return a "range", that goes from 0-3 or 0-4. When it's 0, the temperature readings are in single digit celsius, which seems wrong. When it's between 1-3/4, it seems accurate. So I'm not sure what the 0 state indicates, and what the corresponding temperature values in that state mean.
