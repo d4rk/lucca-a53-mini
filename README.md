@@ -2,8 +2,6 @@
 
 ![image of the A53 Mini](images/a53.png?raw=true)
 
-> *_STILL UNDER DEVELOPMENT_*
-
 This project allows you to interact with S1 v.02.07 BLE devices,
 which is the timer installed in [LUCCA A53 Mini](https://clivecoffee.com/products/lucca-a53-mini-espresso-machine-by-la-spaziale?variant=39948235440216) Espresso machines.
 
