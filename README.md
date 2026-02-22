@@ -106,13 +106,13 @@ The S1 device communicates over Bluetooth Low Energy (BLE) using custom characte
 *   `acab0002-77f5-479e-8711-b3b99198ce6c` (Brew Boiler)
     *   **Description**: Status and temperature of the brew boiler.
     *   **Format**: 4 bytes
-        *   Bytes 0-1: Temperature (little-endian, value / 10.0 for °C)
-        *   Byte 2: Status code? (ranges from 0-3 as temp goes up)
+        *   Bytes 0-1: Temperature (16-bit signed little-endian, value / 10.0 for °C)
+        *   Byte 2: Status code (Reserved, currently observed as 0x00)
         *   Byte 3: Unknown/Reserved
 
 *   `acab0003-77f5-479e-8711-b3b99198ce6c` (Steam Boiler)
     *   **Description**: Status and temperature of the steam boiler.
     *   **Format**: 4 bytes
-        *   Bytes 0-1: Temperature (little-endian, value / 10.0 for °C)
-        *   Byte 2: Status code? (ranges from 0-4 as temp goes up)
+        *   Bytes 0-1: Temperature (16-bit signed little-endian, value / 10.0 for °C)
+        *   Byte 2: Status code (Reserved, currently observed as 0x00)
         *   Byte 3: Unknown/Reserved

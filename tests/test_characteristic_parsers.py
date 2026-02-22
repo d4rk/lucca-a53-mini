@@ -47,9 +47,19 @@ class TestCharacteristicParsers(unittest.TestCase):
     def test_boiler_parser(self):
         parser = BoilerParser("Brew")
         # Simulate raw data for brew boiler
-        raw_data = bytearray([0x5A, 0x00, 0x01, 0x00])  # 90 degrees, status 1
+        # 90 degrees C = 900 = 0x0384. Little-endian: 84 03. Status 1.
+        raw_data = bytearray([0x84, 0x03, 0x01, 0x00])
         decoded = parser.parse_value(raw_data)
-        self.assertIn(("Brew Boiler Temp", 9.0), decoded)
+        self.assertIn(("Brew Boiler Temp", 90.0), decoded)
+        self.assertIn(("Brew Boiler Status", 1), decoded)
+
+        # Test negative temperature
+        # -1.0 degrees C = -10. -10 in 16-bit 2's complement is 0xFFF6.
+        # Little-endian: F6 FF. Status 0.
+        raw_data_neg = bytearray([0xF6, 0xFF, 0x00, 0x00])
+        decoded_neg = parser.parse_value(raw_data_neg)
+        self.assertIn(("Brew Boiler Temp", -1.0), decoded_neg)
+        self.assertIn(("Brew Boiler Status", 0), decoded_neg)
 
     def test_get_parser(self):
         self.assertIsInstance(get_parser(UUID_CURRENT_TIME), DateTimeParser)

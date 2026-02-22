@@ -105,12 +105,12 @@ class BoilerParser(CharacteristicParser):
         results = []
 
         # Temperature is the first two bytes in Celsius, scaled by 10
-        temp_raw = int.from_bytes(value[0:2], "little")
+        temp_raw = int.from_bytes(value[0:2], "little", signed=True)
         temperature = temp_raw / 10.0
         results.append((f"{self.name} Boiler Temp", temperature))
 
-        # Status code is the second byte (ranging from 0 to 4)
-        status_code_byte = value[1]
+        # Status code is the third byte (index 2)
+        status_code_byte = value[2]
         results.insert(0, (f"{self.name} Boiler Status", status_code_byte))
 
         return results
